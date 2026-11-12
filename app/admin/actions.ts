@@ -42,19 +42,23 @@ function sniffImage(b: Uint8Array): ImageKind | null {
 }
 
 async function storeImage(file: File, backTo: string): Promise<string> {
+  const images = getEnv().IMAGES;
+  if (!images) redirect(`${backTo}?error=${encodeURIComponent("Image upload is not set up yet (R2 is not enabled). Save the post without an image for now.")}`);
   if (file.size > MAX_IMAGE_BYTES) redirect(`${backTo}?error=${encodeURIComponent("Image is larger than 5 MB.")}`);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = sniffImage(bytes);
   if (!kind) redirect(`${backTo}?error=${encodeURIComponent("Cover must be a JPG, PNG, WebP, GIF or AVIF image.")}`);
   const key = `${crypto.randomUUID()}.${kind.ext}`;
-  await getEnv().IMAGES.put(key, bytes.buffer as ArrayBuffer, { httpMetadata: { contentType: kind.type } });
+  await images.put(key, bytes.buffer as ArrayBuffer, { httpMetadata: { contentType: kind.type } });
   return key;
 }
 
 async function removeImageIfUnused(key: string | null, exceptPostId?: number): Promise<void> {
   if (!key) return;
+  const images = getEnv().IMAGES;
+  if (!images) return;
   if (await isImageInUse(key, exceptPostId)) return;
-  await getEnv().IMAGES.delete(key);
+  await images.delete(key);
 }
 
 /* ------------------------------ posts ------------------------------ */

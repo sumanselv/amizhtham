@@ -1,6 +1,7 @@
 import { savePostAction } from "@/app/admin/actions";
 import { coverUrl } from "@/components/PostCard";
 import type { PostWithTags } from "@/lib/db";
+import { imagesEnabled } from "@/lib/env";
 
 export default function PostForm({ post, error, tagSuggestions }: { post?: PostWithTags; error?: string; tagSuggestions: string[] }) {
   return (
@@ -60,7 +61,11 @@ export default function PostForm({ post, error, tagSuggestions }: { post?: PostW
             </label>
           </div>
         )}
-        <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" className="block w-full text-sm" />
+        {imagesEnabled() ? (
+          <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" className="block w-full text-sm" />
+        ) : (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Image upload is off until R2 is enabled on the Cloudflare account (see README).</p>
+        )}
       </div>
 
       <div>

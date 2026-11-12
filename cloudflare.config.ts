@@ -6,8 +6,8 @@ export default defineConfig({
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-11-12",
     compatibilityFlags: ["nodejs_compat"],
-    // Your custom domain (the domain's DNS must be on Cloudflare). Uncomment and edit, then run `npm run deploy`.
-    // domains: ["yourdomain.com", "www.yourdomain.com"],
+    // Custom domains (the domain's DNS must be on Cloudflare).
+    domains: ["amizhtham.org", "www.amizhtham.org"],
     assets: {
       htmlHandling: "none",
       notFoundHandling: "none",
@@ -16,7 +16,7 @@ export default defineConfig({
     env: {
       ASSETS: bindings.assets(),
       // Posts and tags live in D1 (SQLite). Tables are created automatically on first request.
-      DB: bindings.d1({ name: "remedy-blog-db" }),
+      DB: bindings.d1({ name: "remedy-blog-db", id: "879bbb17-6c05-46a6-a2a9-1b80e1efc692" }),
       // Cover images uploaded from the admin page.
       IMAGES: bindings.r2({ name: "remedy-blog-images" }),
       // Admin password. Set it with: npx cf secrets ... (see README), or in .dev.vars for local dev.

@@ -42,6 +42,10 @@ To test the production build locally: `npm run build && npm run start`.
 The D1 database (`remedy-blog-db`) and R2 bucket (`remedy-blog-images`) are declared in `cloudflare.config.ts`. If the deploy says they do not exist, create them first:
 `npx cf d1 create` and `npx cf r2 buckets create` (use the same names), then deploy again.
 
+## Enabling image upload (R2)
+
+Image upload needs R2 on your Cloudflare account. Enable **R2 Object Storage** in the dashboard, uncomment the `IMAGES` line in `cloudflare.config.ts`, and push. Until then the site works without cover images.
+
 ## Custom domain
 
 1. Put your domain's DNS on Cloudflare (buy a `.com` there, or add a domain bought elsewhere and change its nameservers to the two Cloudflare gives you).

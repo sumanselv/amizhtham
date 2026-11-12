@@ -12,7 +12,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
   }
   if (!KEY_PATTERN.test(key)) return new Response("Not found", { status: 404 });
 
-  const object = await getEnv().IMAGES.get(key);
+  const images = getEnv().IMAGES;
+  if (!images) return new Response("Not found", { status: 404 });
+  const object = await images.get(key);
   if (!object) return new Response("Not found", { status: 404 });
 
   return new Response(object.body, {

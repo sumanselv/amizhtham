@@ -31,8 +31,13 @@ export interface R2Like {
 
 export interface AppEnv {
   DB: D1Like;
-  IMAGES: R2Like;
+  IMAGES?: R2Like;
   ADMIN_PASSWORD: string;
+}
+
+/** True when the R2 image bucket is bound to this Worker. */
+export function imagesEnabled(): boolean {
+  return !!(env as unknown as AppEnv).IMAGES;
 }
 
 export function getEnv(): AppEnv {
