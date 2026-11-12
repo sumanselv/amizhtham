@@ -16,14 +16,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <>
       <section className="mb-6 sm:mb-8">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-          {q ? `Results for “${q}”` : "Simple home remedies, made instant"}
+        <h1 lang="ta" className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
+          {q ? `“${q}” தேடல் முடிவுகள்` : "எளிய வீட்டு வைத்தியம், உடனடியாக"}
         </h1>
-        {!q && <p className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:mt-3 sm:text-base">Browse traditional remedies by ingredient. Tap a tag to see every post that uses it.</p>}
+        {!q && <p lang="ta" className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:mt-3 sm:text-base">
+            பாரம்பரிய வைத்தியங்களைப் பொருட்கள் வாரியாகப் பாருங்கள். ஒரு குறிச்சொல்லைத் தொட்டால், அதைப் பயன்படுத்தும் அனைத்துப் பதிவுகளும் தெரியும்.
+          </p>}
       </section>
 
       {!q && tags.length > 0 && (
-        <section aria-label="Browse by remedy" className="mb-8 flex flex-wrap gap-2 sm:mb-10">
+        <section aria-label="வைத்தியம் வாரியாகப் பார்க்க" className="mb-8 flex flex-wrap gap-2 sm:mb-10">
           {tags.map((tag) => (
             <Link
               key={tag.id}
@@ -38,8 +40,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
 
       {posts.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
-          {q ? "No remedies matched your search." : "No posts yet. Add your first remedy from the admin page."}
+        <p lang="ta" className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
+          {q ? "உங்கள் தேடலுக்குப் பொருத்தமான வைத்தியங்கள் இல்லை." : "இன்னும் பதிவுகள் எதுவும் இல்லை."}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">

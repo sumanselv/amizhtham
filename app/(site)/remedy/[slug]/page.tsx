@@ -13,7 +13,7 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(decodeParam(slug));
-  if (!post) return { title: "Remedy not found" };
+  if (!post) return { title: "வைத்தியம் கிடைக்கவில்லை" };
   const description = post.description || plainExcerpt(post.content);
   const image = coverUrl(post.cover_image);
   return {
@@ -82,14 +82,14 @@ export default async function RemedyPage({ params }: Props) {
 
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      <p className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
-        This remedy is shared for general information and is not medical advice. Please check with a doctor if you are pregnant,
-        on medication, or have a health condition.
+      <p lang="ta" className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
+        இந்த வைத்தியம் பொதுவான தகவலுக்காக மட்டுமே பகிரப்படுகிறது; இது மருத்துவ ஆலோசனை அல்ல. நீங்கள் கர்ப்பமாக இருந்தால், மருந்துகள்
+        உட்கொண்டால் அல்லது உடல்நலப் பிரச்சினை இருந்தால், மருத்துவரிடம் கேளுங்கள்.
       </p>
 
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
-          <h2 className="mb-4 text-xl font-bold">More remedies you may like</h2>
+          <h2 lang="ta" className="mb-4 text-xl font-bold">நீங்கள் விரும்பக்கூடிய மேலும் வைத்தியங்கள்</h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {related.map((p) => (
               <PostCard key={p.id} post={p} />

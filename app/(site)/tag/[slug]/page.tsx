@@ -13,10 +13,10 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ page?:
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { slug } = await params;
   const tag = await getTagBySlug(decodeParam(slug));
-  if (!tag) return { title: "Remedy not found" };
+  if (!tag) return { title: "வைத்தியம் கிடைக்கவில்லை" };
   return {
-    title: `${tag.name} home remedies`,
-    description: `All home remedies and posts that use ${tag.name}.`,
+    title: `${tag.name} வீட்டு வைத்தியங்கள்`,
+    description: `${tag.name} பயன்படுத்தும் அனைத்து வீட்டு வைத்தியங்களும் பதிவுகளும்.`,
     alternates: { canonical: `/tag/${encodeURIComponent(tag.slug)}` },
   };
 }
@@ -41,13 +41,13 @@ export default async function TagPage({ params, searchParams }: Props) {
       <h1 lang={langOf(tag.name)} className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
         {tag.name}
       </h1>
-      <p className="mt-2 text-[var(--muted)]">
-        {total} {total === 1 ? "post" : "posts"} using {tag.name}
+      <p lang="ta" className="mt-2 text-[var(--muted)]">
+        {tag.name} பயன்படுத்தும் {total} பதிவுகள்
       </p>
 
       {posts.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
-          No published posts for this remedy yet.
+        <p lang="ta" className="mt-8 rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
+          இந்த வைத்தியத்திற்கு இன்னும் பதிவுகள் இல்லை.
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">

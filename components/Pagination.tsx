@@ -25,20 +25,20 @@ export default function Pagination({
   };
 
   return (
-    <nav className="mt-10 flex items-center justify-center gap-3 text-sm" aria-label="Pagination">
+    <nav lang="ta" className="mt-10 flex items-center justify-center gap-3 text-sm" aria-label="பக்கங்கள்">
       {page > 1 ? (
         <Link href={href(page - 1)} className="btn btn-ghost">
-          ← Newer
+          ← புதியவை
         </Link>
       ) : (
         <span />
       )}
       <span className="text-[var(--muted)]">
-        Page {page} of {pages}
+        பக்கம் {page} / {pages}
       </span>
       {page < pages ? (
         <Link href={href(page + 1)} className="btn btn-ghost">
-          Older →
+          பழையவை →
         </Link>
       ) : (
         <span />
