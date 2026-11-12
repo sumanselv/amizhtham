@@ -1,5 +1,5 @@
 import { getEnv, type D1Like } from "./env";
-import { slugify } from "./slug";
+import { randomCode, slugify, type TagInput } from "./slug";
 
 export interface Tag {
   id: number;
@@ -180,6 +180,23 @@ export async function listTags(): Promise<Tag[]> {
   return rows.results;
 }
 
+/** Every tag (including ones only used by drafts) for the admin rename page. */
+export async function listAllTags(): Promise<Tag[]> {
+  const d1 = await db();
+  const rows = await d1
+    .prepare(
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, COUNT(pt.post_id) AS post_count
+       FROM tags t LEFT JOIN post_tags pt ON pt.tag_id = t.id GROUP BY t.id ORDER BY t.name`,
+    )
+    .all<Tag>();
+  return rows.results;
+}
+
+export async function renameTag(id: number, name: string): Promise<void> {
+  const d1 = await db();
+  await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, id).run();
+}
+
 export async function listAllTagNames(): Promise<string[]> {
   const d1 = await db();
   const rows = await d1.prepare("SELECT name FROM tags ORDER BY name").all<{ name: string }>();
@@ -215,7 +232,7 @@ export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; up
 /* ------------------------------ writing ------------------------------ */
 
 async function uniqueSlug(d1: D1Like, base: string, ignoreId?: number): Promise<string> {
-  const root = base || `post-${Date.now().toString(36)}`;
+  const root = base || `remedy-${randomCode()}`;
   let candidate = root;
   for (let i = 2; i < 200; i++) {
     const hit = await d1
@@ -228,13 +245,24 @@ async function uniqueSlug(d1: D1Like, base: string, ignoreId?: number): Promise<
   return `${root}-${Date.now().toString(36)}`;
 }
 
-async function setPostTags(d1: D1Like, postId: number, tagNames: string[]): Promise<void> {
+async function setPostTags(d1: D1Like, postId: number, tags: TagInput[]): Promise<void> {
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(postId).run();
-  for (const name of tagNames) {
-    const slug = slugify(name);
-    if (!slug) continue;
-    await d1.prepare("INSERT OR IGNORE INTO tags (name, slug) VALUES (?, ?)").bind(name, slug).run();
-    const tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
+  for (const input of tags) {
+    const name = input.name;
+    // 1. Same name already exists: reuse that tag.
+    let tag = await d1.prepare("SELECT id FROM tags WHERE name = ?").bind(name).first<{ id: number }>();
+    if (!tag) {
+      // 2. Otherwise find or create a tag by its English URL name.
+      const slug = input.slug || slugify(name) || `tag-${randomCode()}`;
+      tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
+      if (tag) {
+        // An explicit "name | url" renames the existing tag (e.g. Amla -> நெல்லிக்காய்).
+        if (input.slug) await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, tag.id).run();
+      } else {
+        await d1.prepare("INSERT INTO tags (name, slug) VALUES (?, ?)").bind(name, slug).run();
+        tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
+      }
+    }
     if (tag) {
       await d1.prepare("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)").bind(postId, tag.id).run();
     }
@@ -250,7 +278,7 @@ export interface PostInput {
   content: string;
   cover_image: string | null;
   published: boolean;
-  tags: string[];
+  tags: TagInput[];
 }
 
 export async function createPost(input: PostInput): Promise<number> {
@@ -382,6 +410,6 @@ This is a **sample post** - edit or delete it from the admin page.`,
       .bind(s.title, slug, s.description, s.content, created, created)
       .run();
     const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
-    if (row) await setPostTags(d1, row.id, s.tags);
+    if (row) await setPostTags(d1, row.id, s.tags.map((name) => ({ name })));
   }
 }

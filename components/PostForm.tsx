@@ -2,8 +2,11 @@ import { savePostAction } from "@/app/admin/actions";
 import { coverUrl } from "@/components/PostCard";
 import type { PostWithTags } from "@/lib/db";
 import { imagesEnabled } from "@/lib/env";
+import { slugify } from "@/lib/slug";
 
 export default function PostForm({ post, error, tagSuggestions }: { post?: PostWithTags; error?: string; tagSuggestions: string[] }) {
+  // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
+  const tagDefault = post?.tags.map((t) => (slugify(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -23,17 +26,20 @@ export default function PostForm({ post, error, tagSuggestions }: { post?: PostW
 
       <div>
         <label htmlFor="slug" className="mb-1 block text-sm font-semibold">
-          URL name <span className="font-normal text-[var(--muted)]">(optional - made from the title if empty)</span>
+          URL name <span className="font-normal text-[var(--muted)]">(English letters, optional)</span>
         </label>
         <input id="slug" name="slug" defaultValue={post?.slug} className="field" placeholder="amla-juice-for-vitamin-c" />
-        <p className="mt-1 text-xs text-[var(--muted)]">The post address will be /remedy/this-name. Changing it later breaks old links.</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">The address stays in English: /remedy/this-name. If the title is in Tamil and this is empty, a code like remedy-k3f9x2 is used. Changing it later breaks old links.</p>
       </div>
 
       <div>
         <label htmlFor="tags" className="mb-1 block text-sm font-semibold">
-          Remedy tags <span className="font-normal text-[var(--muted)]">(comma separated, e.g. Amla, Honey)</span>
+          Remedy tags <span className="font-normal text-[var(--muted)]">(comma separated; Tamil is fine)</span>
         </label>
-        <input id="tags" name="tags" list="tag-list" defaultValue={post?.tags.map((t) => t.name).join(", ")} className="field" placeholder="Amla, Honey" />
+        <input id="tags" name="tags" list="tag-list" defaultValue={tagDefault} className="field" placeholder="நெல்லிக்காய் | amla, தேன் | honey" />
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          For a Tamil tag, add its English web address after a bar: <code>நெல்லிக்காய் | amla</code> gives /tag/amla. Without it, a code is used.
+        </p>
         <datalist id="tag-list">
           {tagSuggestions.map((t) => (
             <option key={t} value={t} />

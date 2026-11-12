@@ -25,7 +25,7 @@ export default async function EditPostPage({
   return (
     <>
       <AdminBar />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         <h1 className="mb-6 text-2xl font-bold">Edit post</h1>
         <div className="rounded-xl border border-[var(--line)] bg-white p-6">
           <PostForm post={post} error={error} tagSuggestions={tagSuggestions} />

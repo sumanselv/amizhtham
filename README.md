@@ -53,6 +53,14 @@ Image upload needs R2 on your Cloudflare account. Enable **R2 Object Storage** i
 3. Run `npm run deploy`. Cloudflare creates the DNS records and the SSL certificate.
 4. In the Cloudflare dashboard, add a Redirect Rule from `www` to the bare domain (or the reverse), so Google sees one main address.
 
+## Tamil content
+
+The page text around the posts is fixed (logo அமிழ்தம், முகப்பு, தேடல்), and **posts can be written in Tamil**: title, description, body and tags.
+
+- **Web addresses always stay in English.** Fill the *URL name* box with English letters (e.g. `amla-hair-fall`). If the title is Tamil and the box is empty, a code such as `remedy-k3f9x2` is used.
+- **Tags:** type Tamil names directly. To choose the English address of a Tamil tag, add it after a bar: `நெல்லிக்காய் | amla` gives `/tag/amla`. Typing the same Tamil name again reuses the tag.
+- **Rename existing tags** (for example Amla to நெல்லிக்காய்) in **Admin > Tags**. Their English addresses do not change.
+
 ## Writing posts
 
 In **Admin > New post**: title, optional URL name, tags (comma separated, e.g. `Amla, Honey`), short description (shown on the card), cover image, and the body.

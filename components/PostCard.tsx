@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
-import { formatDate } from "@/lib/slug";
+import { formatDate, langOf } from "@/lib/slug";
 
 const PLACEHOLDER_TONES = [
   "from-emerald-100 to-lime-50",
@@ -39,6 +39,7 @@ export default function PostCard({ post }: { post: PostWithTags }) {
               <li key={tag.id}>
                 <Link
                   href={`/tag/${encodeURIComponent(tag.slug)}`}
+                  lang={langOf(tag.name)}
                   className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
                 >
                   {tag.name}
@@ -48,13 +49,13 @@ export default function PostCard({ post }: { post: PostWithTags }) {
           </ul>
         )}
 
-        <h2 className="text-lg font-bold leading-snug text-[var(--ink)]">
+        <h2 lang={langOf(post.title)} className="text-lg font-bold leading-snug text-[var(--ink)]">
           <Link href={`/remedy/${encodeURIComponent(post.slug)}`} className="after:absolute after:inset-0 after:content-['']">
             {post.title}
           </Link>
         </h2>
 
-        <p className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{post.description}</p>
+        <p lang={langOf(post.description)} className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{post.description}</p>
 
         <p className="mt-auto pt-1 text-xs text-[var(--muted)]">{formatDate(post.created_at)}</p>
       </div>

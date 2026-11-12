@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, deletePost, getPostById, isImageInUse, updatePost, type PostInput } from "@/lib/db";
+import { createPost, deletePost, getPostById, isImageInUse, listAllTags, renameTag, updatePost, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { parseTagInput } from "@/lib/slug";
 
@@ -118,4 +118,19 @@ export async function deletePostAction(formData: FormData): Promise<void> {
   const cover = await deletePost(id);
   await removeImageIfUnused(cover);
   redirect("/admin?deleted=1");
+}
+
+/* ------------------------------ tags ------------------------------ */
+
+/** Rename tags (for example to Tamil). The tag's English web address does not change. */
+export async function saveTagNamesAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const tags = await listAllTags();
+  for (const tag of tags) {
+    const raw = formData.get(`tag_${tag.id}`);
+    if (typeof raw !== "string") continue;
+    const name = raw.trim().replace(/\s+/g, " ").slice(0, 40);
+    if (name && name !== tag.name) await renameTag(tag.id, name);
+  }
+  redirect("/admin/tags?saved=1");
 }

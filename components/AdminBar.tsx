@@ -13,6 +13,9 @@ export default function AdminBar() {
           <Link href="/admin/new" className="hover:text-[var(--ink)]">
             New post
           </Link>
+          <Link href="/admin/tags" className="hover:text-[var(--ink)]">
+            Tags
+          </Link>
           <Link href="/" target="_blank" className="hover:text-[var(--ink)]">
             View site ↗
           </Link>

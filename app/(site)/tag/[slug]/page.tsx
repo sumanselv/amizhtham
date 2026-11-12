@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, getTagBySlug, listPosts } from "@/lib/db";
-import { decodeParam } from "@/lib/slug";
+import { decodeParam, langOf } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -33,16 +33,14 @@ export default async function TagPage({ params, searchParams }: Props) {
   return (
     <>
       <nav className="mb-4 text-sm text-[var(--muted)]">
-        <Link href="/" className="hover:text-[var(--ink)]">
-          Home
-        </Link>{" "}
-        /{" "}
-        <Link href="/tags" className="hover:text-[var(--ink)]">
-          All remedies
+        <Link href="/" lang="ta" className="hover:text-[var(--ink)]">
+          முகப்பு
         </Link>
       </nav>
 
-      <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{tag.name}</h1>
+      <h1 lang={langOf(tag.name)} className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
+        {tag.name}
+      </h1>
       <p className="mt-2 text-[var(--muted)]">
         {total} {total === 1 ? "post" : "posts"} using {tag.name}
       </p>
@@ -52,7 +50,7 @@ export default async function TagPage({ params, searchParams }: Props) {
           No published posts for this remedy yet.
         </p>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}

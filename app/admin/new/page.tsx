@@ -12,7 +12,7 @@ export default async function NewPostPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <AdminBar />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         <h1 className="mb-6 text-2xl font-bold">New post</h1>
         <div className="rounded-xl border border-[var(--line)] bg-white p-6">
           <PostForm error={error} tagSuggestions={tagSuggestions} />

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
-import { decodeParam, formatDate } from "@/lib/slug";
+import { decodeParam, formatDate, langOf } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -35,26 +35,29 @@ export default async function RemedyPage({ params }: Props) {
   return (
     <article className="mx-auto max-w-3xl">
       <nav className="mb-4 text-sm text-[var(--muted)]">
-        <Link href="/" className="hover:text-[var(--ink)]">
-          Home
+        <Link href="/" lang="ta" className="hover:text-[var(--ink)]">
+          முகப்பு
         </Link>
         {post.tags[0] && (
           <>
             {" / "}
-            <Link href={`/tag/${encodeURIComponent(post.tags[0].slug)}`} className="hover:text-[var(--ink)]">
+            <Link href={`/tag/${encodeURIComponent(post.tags[0].slug)}`} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
               {post.tags[0].name}
             </Link>
           </>
         )}
       </nav>
 
-      <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{post.title}</h1>
+      <h1 lang={langOf(post.title)} className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+        {post.title}
+      </h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {post.tags.map((tag) => (
           <Link
             key={tag.id}
             href={`/tag/${encodeURIComponent(tag.slug)}`}
+            lang={langOf(tag.name)}
             className="rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
           >
             {tag.name}
@@ -64,23 +67,30 @@ export default async function RemedyPage({ params }: Props) {
       </div>
 
       {cover && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={cover} alt={post.title} className="mt-6 w-full rounded-2xl border border-[var(--line)] object-cover" />
+        <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--line)] bg-slate-100 sm:mt-6">
+          {/* Fixed, screen-sized height so a large upload never fills the whole page. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cover} alt={post.title} className="block h-48 w-full object-cover min-[480px]:h-60 sm:h-72 lg:h-80" />
+        </div>
       )}
 
-      {post.description && <p className="mt-6 text-lg leading-8 text-[var(--muted)]">{post.description}</p>}
+      {post.description && (
+        <p lang={langOf(post.description)} className="mt-5 text-base leading-7 text-[var(--muted)] sm:mt-6 sm:text-lg sm:leading-8">
+          {post.description}
+        </p>
+      )}
 
-      <div className="post-body mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
+      <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      <p className="mt-10 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
         This remedy is shared for general information and is not medical advice. Please check with a doctor if you are pregnant,
         on medication, or have a health condition.
       </p>
 
       {related.length > 0 && (
-        <section className="mt-14">
+        <section className="mt-10 sm:mt-14">
           <h2 className="mb-4 text-xl font-bold">More remedies you may like</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {related.map((p) => (
               <PostCard key={p.id} post={p} />
             ))}
