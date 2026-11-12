@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 export const SITE_NAME = "Amizhtham";
 
@@ -7,9 +8,7 @@ export default function SiteHeader({ query = "" }: { query?: string }) {
     <header className="border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold text-[var(--brand-dark)]">
-          <span aria-hidden className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-soft)]">
-            🌿
-          </span>
+          <Logo className="h-9 w-9" />
           {SITE_NAME}
         </Link>
         <nav className="flex gap-5 text-sm font-medium text-[var(--muted)]">
