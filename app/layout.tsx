@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Instant Remedy - Simple Home Remedies", template: "%s | Instant Remedy" },
+  title: { default: "Amizhtham - Simple Home Remedies", template: "%s | Amizhtham" },
   description: "Simple, traditional home remedies with easy ingredients. Browse by remedy such as amla, turmeric, ginger and more.",
 };
 

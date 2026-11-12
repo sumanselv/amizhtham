@@ -1,4 +1,4 @@
-# Instant Remedy - home remedy blog
+# Amizhtham - home remedy blog
 
 A blog for home remedies, built with **Next.js (vinext) on Cloudflare Workers**.
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const SITE_NAME = "Instant Remedy";
+export const SITE_NAME = "Amizhtham";
 
 export default function SiteHeader({ query = "" }: { query?: string }) {
   return (
