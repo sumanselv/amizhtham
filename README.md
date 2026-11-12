@@ -36,7 +36,7 @@ To test the production build locally: `npm run build && npm run start`.
 2. If your account id is not picked up automatically, set `CLOUDFLARE_ACCOUNT_ID` or add `accountId` to `cloudflare.config.ts`.
 3. Deploy: `npm run deploy`
 4. Set the admin password as a secret (do not put it in the code):
-   `npx cf workers secrets update ADMIN_PASSWORD --worker remedy-blog --text "your-long-password"`
+   `npx cf workers secrets update ADMIN_PASSWORD --worker amizhtham --text "your-long-password"`
 5. Open `https://remedy-blog.<your-subdomain>.workers.dev/admin/login`.
 
 The D1 database (`remedy-blog-db`) and R2 bucket (`remedy-blog-images`) are declared in `cloudflare.config.ts`. If the deploy says they do not exist, create them first:
