@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { getLang } from "@/lib/i18n";
+import { getUi } from "@/lib/ui";
 
-export const metadata: Metadata = {
-  title: { default: "அமிழ்தம் - எளிய வீட்டு வைத்தியம்", template: "%s | அமிழ்தம்" },
-  description: "எளிய பொருட்களுடன் பாரம்பரிய வீட்டு வைத்தியங்கள். நெல்லிக்காய், மஞ்சள், இஞ்சி போன்ற பொருட்கள் வாரியாகப் பாருங்கள்.",
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const ui = await getUi(await getLang());
+  return {
+    title: { default: ui.siteTitle, template: "%s | அமிழ்தம்" },
+    description: ui.siteDescription,
+    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
+  };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const lang = await getLang();
   return (
-    <html lang="ta">
+    <html lang={lang}>
       <body className="min-h-screen bg-white text-[var(--ink)] antialiased">{children}</body>
     </html>
   );

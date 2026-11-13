@@ -94,3 +94,18 @@ cloudflare.config.ts   Worker, D1, R2, secret and domain settings
 ## Health content
 
 Remedy posts should stay general ("traditionally used", "many people enjoy") and avoid promising cures. The footer and every post page include a disclaimer; keep it.
+
+## Languages (automatic)
+
+The site opens in the visitor's own language: a saved choice first, otherwise the phone / browser language
+(`Accept-Language`). Supported: Tamil, English, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati.
+
+- Posts are written once (Tamil is the source). Titles, descriptions, bodies and tag names are translated on
+  demand with Workers AI (`AI` binding, model `@cf/meta/m2m100-1.2b`) and cached forever in the D1 `translations`
+  table, so each text is translated only once. Editing a post re-translates only the text that changed.
+- Up to 30 new translations are made per page view; anything not yet translated shows in its original language
+  and fills in on the next visit.
+- Web addresses always stay English (`/tag/amla`, `/remedy/<slug>`).
+- Interface text lives in `lib/ui.ts` (Tamil + hand-written English; other languages are machine-translated).
+- The language menu (🌐) sets a cookie through `/lang?l=<code>`. The admin area stays in English.
+- To add a language, add it to `LANGUAGES` in `lib/i18n.ts` (it must be supported by the m2m100 model) and to `lang` CSS if it needs a font.

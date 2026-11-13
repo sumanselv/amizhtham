@@ -5,6 +5,8 @@ import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
 import { decodeParam, formatDate, langOf } from "@/lib/slug";
+import { getLang, languageOf, localizePost, localizePosts } from "@/lib/i18n";
+import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +14,10 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(decodeParam(slug));
-  if (!post) return { title: "வைத்தியம் கிடைக்கவில்லை" };
+  const raw = await getPostBySlug(decodeParam(slug));
+  const lang = await getLang();
+  if (!raw) return { title: (await getUi(lang)).notFound };
+  const post = { ...raw, ...(await localizePosts(lang, [raw]))[0] };
   const description = post.description || plainExcerpt(post.content);
   const image = coverUrl(post.cover_image);
   return {
@@ -26,17 +30,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function RemedyPage({ params }: Props) {
   const { slug } = await params;
-  const post = await getPostBySlug(decodeParam(slug));
-  if (!post) notFound();
+  const raw = await getPostBySlug(decodeParam(slug));
+  if (!raw) notFound();
 
-  const related = await listRelatedPosts(post);
+  const lang = await getLang();
+  const ui = await getUi(lang);
+  const post = await localizePost(lang, raw);
+  const related = await localizePosts(lang, await listRelatedPosts(raw));
+  const locale = languageOf(lang).locale;
   const cover = coverUrl(post.cover_image);
 
   return (
     <article className="mx-auto max-w-3xl">
       <nav className="mb-4 text-sm text-[var(--muted)]">
-        <Link href="/" lang="ta" className="hover:text-[var(--ink)]">
-          முகப்பு
+        <Link href="/" lang={lang} className="hover:text-[var(--ink)]">
+          {ui.home}
         </Link>
         {post.tags[0] && (
           <>
@@ -63,7 +71,7 @@ export default async function RemedyPage({ params }: Props) {
             {tag.name}
           </Link>
         ))}
-        <span className="text-sm text-[var(--muted)]">{formatDate(post.created_at)}</span>
+        <span className="text-sm text-[var(--muted)]">{formatDate(post.created_at, locale)}</span>
       </div>
 
       {cover && (
@@ -82,17 +90,16 @@ export default async function RemedyPage({ params }: Props) {
 
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      <p lang="ta" className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
-        இந்த வைத்தியம் பொதுவான தகவலுக்காக மட்டுமே பகிரப்படுகிறது; இது மருத்துவ ஆலோசனை அல்ல. நீங்கள் கர்ப்பமாக இருந்தால், மருந்துகள்
-        உட்கொண்டால் அல்லது உடல்நலப் பிரச்சினை இருந்தால், மருத்துவரிடம் கேளுங்கள்.
+      <p lang={lang} className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
+        {ui.disclaimerPost}
       </p>
 
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
-          <h2 lang="ta" className="mb-4 text-xl font-bold">நீங்கள் விரும்பக்கூடிய மேலும் வைத்தியங்கள்</h2>
+          <h2 lang={lang} className="mb-4 text-xl font-bold">{ui.related}</h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {related.map((p) => (
-              <PostCard key={p.id} post={p} />
+              <PostCard key={p.id} post={p} locale={locale} />
             ))}
           </div>
         </section>

@@ -52,6 +52,8 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_post_tags_tag ON post_tags(tag_id)`,
   `CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(published, created_at)`,
   `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  // Cached machine translations, keyed by language + hash of the source text.
+  `CREATE TABLE IF NOT EXISTS translations (key TEXT PRIMARY KEY, text TEXT NOT NULL)`,
 ];
 
 let ready: Promise<D1Like> | null = null;

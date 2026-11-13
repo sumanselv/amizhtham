@@ -29,8 +29,14 @@ export interface R2Like {
   delete(key: string): Promise<void>;
 }
 
+export interface AiLike {
+  run(model: string, input: Record<string, unknown>): Promise<unknown>;
+}
+
 export interface AppEnv {
   DB: D1Like;
+  /** Workers AI, used for automatic translation. Optional: without it text stays in its original language. */
+  AI?: AiLike;
   IMAGES?: R2Like;
   ADMIN_PASSWORD: string;
 }

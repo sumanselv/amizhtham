@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { getLang } from "@/lib/i18n";
+import { getUi } from "@/lib/ui";
 
-export default function Pagination({
+export default async function Pagination({
   page,
   total,
   pageSize,
@@ -13,6 +15,8 @@ export default function Pagination({
   basePath: string;
   query?: string;
 }) {
+  const lang = await getLang();
+  const ui = await getUi(lang);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (pages <= 1) return null;
 
@@ -25,20 +29,20 @@ export default function Pagination({
   };
 
   return (
-    <nav lang="ta" className="mt-10 flex items-center justify-center gap-3 text-sm" aria-label="பக்கங்கள்">
+    <nav lang={lang} className="mt-10 flex items-center justify-center gap-3 text-sm" aria-label={ui.pagesLabel}>
       {page > 1 ? (
         <Link href={href(page - 1)} className="btn btn-ghost">
-          ← புதியவை
+          {ui.newer}
         </Link>
       ) : (
         <span />
       )}
       <span className="text-[var(--muted)]">
-        பக்கம் {page} / {pages}
+        {ui.page} {page} / {pages}
       </span>
       {page < pages ? (
         <Link href={href(page + 1)} className="btn btn-ghost">
-          பழையவை →
+          {ui.older}
         </Link>
       ) : (
         <span />

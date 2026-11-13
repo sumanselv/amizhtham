@@ -14,7 +14,7 @@ export function coverUrl(key: string | null): string | null {
   return key ? `/img/${encodeURIComponent(key)}` : null;
 }
 
-export default function PostCard({ post }: { post: PostWithTags }) {
+export default function PostCard({ post, locale }: { post: PostWithTags; locale?: string }) {
   const cover = coverUrl(post.cover_image);
   const tone = PLACEHOLDER_TONES[post.id % PLACEHOLDER_TONES.length];
   const firstTag = post.tags[0]?.name ?? "🌿";
@@ -57,7 +57,7 @@ export default function PostCard({ post }: { post: PostWithTags }) {
 
         <p lang={langOf(post.description)} className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{post.description}</p>
 
-        <p className="mt-auto pt-1 text-xs text-[var(--muted)]">{formatDate(post.created_at)}</p>
+        <p className="mt-auto pt-1 text-xs text-[var(--muted)]">{formatDate(post.created_at, locale)}</p>
       </div>
     </article>
   );

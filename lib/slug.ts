@@ -21,9 +21,16 @@ export function randomCode(length = 6): string {
   return [...bytes].map((b) => (b % 36).toString(36)).join("");
 }
 
-/** "ta" when the text contains Tamil letters, otherwise "en". Used for the HTML lang attribute. */
-export function langOf(text: string): "ta" | "en" {
-  return /[\u0B80-\u0BFF]/.test(text) ? "ta" : "en";
+/** Language code for a piece of text, judged by its script (ta, hi, te, kn, ml, bn, gu) or "en". Used for the HTML lang attribute. */
+export function langOf(text: string): string {
+  if (/[\u0B80-\u0BFF]/.test(text)) return "ta";
+  if (/[\u0C00-\u0C7F]/.test(text)) return "te";
+  if (/[\u0C80-\u0CFF]/.test(text)) return "kn";
+  if (/[\u0D00-\u0D7F]/.test(text)) return "ml";
+  if (/[\u0980-\u09FF]/.test(text)) return "bn";
+  if (/[\u0A80-\u0AFF]/.test(text)) return "gu";
+  if (/[\u0900-\u097F]/.test(text)) return "hi";
+  return "en";
 }
 
 /** Route params may arrive percent-encoded; decode safely. */
@@ -35,10 +42,10 @@ export function decodeParam(value: string): string {
   }
 }
 
-export function formatDate(iso: string): string {
+export function formatDate(iso: string, locale = "ta-IN"): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("ta-IN", { year: "numeric", month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
+  return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
 }
 
 export interface TagInput {

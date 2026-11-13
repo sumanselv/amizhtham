@@ -3,6 +3,8 @@ import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, listPosts, listTags } from "@/lib/db";
 import { langOf } from "@/lib/slug";
+import { getLang, languageOf, localizePosts, localizeTags } from "@/lib/i18n";
+import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,21 +13,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const q = (sp.q ?? "").trim().slice(0, 80);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const [{ posts, total }, tags] = await Promise.all([listPosts({ q, page }), listTags()]);
+  const lang = await getLang();
+  const [{ posts: rawPosts, total }, rawTags, ui] = await Promise.all([listPosts({ q, page }), listTags(), getUi(lang)]);
+  const [posts, tags] = await Promise.all([localizePosts(lang, rawPosts), localizeTags(lang, rawTags)]);
+  const locale = languageOf(lang).locale;
 
   return (
     <>
       <section className="mb-6 sm:mb-8">
-        <h1 lang="ta" className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-          {q ? `“${q}” தேடல் முடிவுகள்` : "எளிய வீட்டு வைத்தியம், உடனடியாக"}
+        <h1 lang={lang} className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
+          {q ? `${ui.searchResults}: “${q}”` : ui.heroTitle}
         </h1>
-        {!q && <p lang="ta" className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:mt-3 sm:text-base">
-            பாரம்பரிய வைத்தியங்களைப் பொருட்கள் வாரியாகப் பாருங்கள். ஒரு குறிச்சொல்லைத் தொட்டால், அதைப் பயன்படுத்தும் அனைத்துப் பதிவுகளும் தெரியும்.
+        {!q && <p lang={lang} className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:mt-3 sm:text-base">
+            {ui.heroSub}
           </p>}
       </section>
 
       {!q && tags.length > 0 && (
-        <section aria-label="வைத்தியம் வாரியாகப் பார்க்க" className="mb-8 flex flex-wrap gap-2 sm:mb-10">
+        <section aria-label={ui.browseByRemedy} className="mb-8 flex flex-wrap gap-2 sm:mb-10">
           {tags.map((tag) => (
             <Link
               key={tag.id}
@@ -40,13 +45,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
 
       {posts.length === 0 ? (
-        <p lang="ta" className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
-          {q ? "உங்கள் தேடலுக்குப் பொருத்தமான வைத்தியங்கள் இல்லை." : "இன்னும் பதிவுகள் எதுவும் இல்லை."}
+        <p lang={lang} className="rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">
+          {q ? ui.noResults : ui.noPosts}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} locale={locale} />
           ))}
         </div>
       )}

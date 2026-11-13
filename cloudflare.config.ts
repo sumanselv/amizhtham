@@ -21,6 +21,8 @@ export default defineConfig({
       IMAGES: bindings.r2({ name: "remedy-blog-images" }),
       // Admin password. Set it with: npx cf secrets ... (see README), or in .dev.vars for local dev.
       ADMIN_PASSWORD: bindings.secret(),
+      // Workers AI: automatic translation into the visitor's language (results are cached in D1).
+      AI: bindings.ai(),
     },
   }),
 });
