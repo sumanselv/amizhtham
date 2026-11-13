@@ -2,11 +2,12 @@ import { savePostAction } from "@/app/admin/actions";
 import { coverUrl } from "@/components/PostCard";
 import type { PostWithTags } from "@/lib/db";
 import { imagesEnabled } from "@/lib/env";
+import { tagSlugFor } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 
 export default function PostForm({ post, error, tagSuggestions }: { post?: PostWithTags; error?: string; tagSuggestions: string[] }) {
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
-  const tagDefault = post?.tags.map((t) => (slugify(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
+  const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -34,11 +35,12 @@ export default function PostForm({ post, error, tagSuggestions }: { post?: PostW
 
       <div>
         <label htmlFor="tags" className="mb-1 block text-sm font-semibold">
-          Remedy tags <span className="font-normal text-[var(--muted)]">(comma separated; Tamil is fine)</span>
+          Remedy tags <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
         </label>
         <input id="tags" name="tags" list="tag-list" defaultValue={tagDefault} className="field" placeholder="நெல்லிக்காய் | amla, தேன் | honey" />
         <p className="mt-1 text-xs text-[var(--muted)]">
-          For a Tamil tag, add its English web address after a bar: <code>நெல்லிக்காய் | amla</code> gives /tag/amla. Without it, a code is used.
+          Tags can be in any language. The web address uses the English name: common names such as நெல்லிக்காய் become <code>/tag/amla</code> on their own.
+          For any other tag add the English name after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can fix addresses later in Admin &gt; Tags.
         </p>
         <datalist id="tag-list">
           {tagSuggestions.map((t) => (

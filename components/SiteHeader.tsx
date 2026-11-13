@@ -12,13 +12,8 @@ export default function SiteHeader({ query = "" }: { query?: string }) {
   return (
     <header className="relative border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6 md:py-4">
-        {/* Phones and small tablets: three-line menu on the left, logo in the centre. */}
-        <MobileMenu>
-          <Link href="/" lang="ta" className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
-            {HOME_LABEL}
-          </Link>
-          <SearchForm idPrefix="mobile" query={query} />
-        </MobileMenu>
+        {/* Phones: empty spacer on the left, same width as the menu button, so the logo stays centred. */}
+        <span aria-hidden="true" className="-ml-2 h-11 w-11 shrink-0 md:hidden" />
 
         <Link
           href="/"
@@ -39,8 +34,13 @@ export default function SiteHeader({ query = "" }: { query?: string }) {
           <SearchForm idPrefix="desktop" query={query} />
         </div>
 
-        {/* Keeps the logo exactly centred on phones (same width as the menu button). */}
-        <span aria-hidden="true" className="h-11 w-11 shrink-0 -mr-2 md:hidden" />
+        {/* Phones and small tablets: three-line menu on the right (Home link and search inside). */}
+        <MobileMenu>
+          <Link href="/" lang="ta" className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
+            {HOME_LABEL}
+          </Link>
+          <SearchForm idPrefix="mobile" query={query} />
+        </MobileMenu>
       </div>
     </header>
   );

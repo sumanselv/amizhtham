@@ -1,5 +1,6 @@
 import { getEnv, type D1Like } from "./env";
 import { randomCode, slugify, type TagInput } from "./slug";
+import { englishNameFor } from "./tagnames";
 
 export interface Tag {
   id: number;
@@ -192,9 +193,13 @@ export async function listAllTags(): Promise<Tag[]> {
   return rows.results;
 }
 
-export async function renameTag(id: number, name: string): Promise<void> {
+/** Change a tag's display name and English address. Returns "slug-taken" if another tag already uses the address. */
+export async function updateTag(id: number, name: string, slug: string): Promise<"ok" | "slug-taken"> {
   const d1 = await db();
-  await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, id).run();
+  const clash = await d1.prepare("SELECT id FROM tags WHERE slug = ? AND id != ?").bind(slug, id).first();
+  if (clash) return "slug-taken";
+  await d1.prepare("UPDATE tags SET name = ?, slug = ? WHERE id = ?").bind(name, slug, id).run();
+  return "ok";
 }
 
 export async function listAllTagNames(): Promise<string[]> {
@@ -245,19 +250,28 @@ async function uniqueSlug(d1: D1Like, base: string, ignoreId?: number): Promise<
   return `${root}-${Date.now().toString(36)}`;
 }
 
+/** The English web address for a tag name: typed by the admin, taken from the name itself, or a known translation. */
+export function tagSlugFor(name: string, typed?: string): string {
+  return typed || slugify(name) || slugify(englishNameFor(name));
+}
+
 async function setPostTags(d1: D1Like, postId: number, tags: TagInput[]): Promise<void> {
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(postId).run();
   for (const input of tags) {
     const name = input.name;
+    const english = tagSlugFor(name, input.slug);
+    // A tag written in another language (typed or known address) takes over the display name
+    // of the English tag with that address, e.g. Amla becomes நெல்லிக்காய்.
+    const renameOnMatch = !!input.slug || (!slugify(name) && !!english);
+
     // 1. Same name already exists: reuse that tag.
     let tag = await d1.prepare("SELECT id FROM tags WHERE name = ?").bind(name).first<{ id: number }>();
     if (!tag) {
-      // 2. Otherwise find or create a tag by its English URL name.
-      const slug = input.slug || slugify(name) || `tag-${randomCode()}`;
+      // 2. Otherwise find or create the tag by its English address.
+      const slug = english || `tag-${randomCode()}`;
       tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
       if (tag) {
-        // An explicit "name | url" renames the existing tag (e.g. Amla -> நெல்லிக்காய்).
-        if (input.slug) await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, tag.id).run();
+        if (renameOnMatch) await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, tag.id).run();
       } else {
         await d1.prepare("INSERT INTO tags (name, slug) VALUES (?, ?)").bind(name, slug).run();
         tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();

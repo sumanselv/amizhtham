@@ -33,7 +33,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               lang={langOf(tag.name)}
               className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)] hover:text-[var(--brand-dark)] sm:px-4"
             >
-              {tag.name} <span className="text-[var(--muted)]">({tag.post_count})</span>
+              {tag.name}
             </Link>
           ))}
         </section>

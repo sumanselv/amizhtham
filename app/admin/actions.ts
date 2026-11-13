@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, deletePost, getPostById, isImageInUse, listAllTags, renameTag, updatePost, type PostInput } from "@/lib/db";
+import { createPost, deletePost, getPostById, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { parseTagInput } from "@/lib/slug";
+import { parseTagInput, slugify } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -122,15 +122,22 @@ export async function deletePostAction(formData: FormData): Promise<void> {
 
 /* ------------------------------ tags ------------------------------ */
 
-/** Rename tags (for example to Tamil). The tag's English web address does not change. */
+/** Save tag names (any language) and their English web addresses. */
 export async function saveTagNamesAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const tags = await listAllTags();
+  const taken: string[] = [];
   for (const tag of tags) {
-    const raw = formData.get(`tag_${tag.id}`);
-    if (typeof raw !== "string") continue;
-    const name = raw.trim().replace(/\s+/g, " ").slice(0, 40);
-    if (name && name !== tag.name) await renameTag(tag.id, name);
+    const rawName = formData.get(`tag_${tag.id}`);
+    const rawSlug = formData.get(`slug_${tag.id}`);
+    if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
+    const name = rawName.trim().replace(/\s+/g, " ").slice(0, 40) || tag.name;
+    const slug = slugify(rawSlug) || tag.slug;
+    if (name === tag.name && slug === tag.slug) continue;
+    if ((await updateTag(tag.id, name, slug)) === "slug-taken") taken.push(slug);
+  }
+  if (taken.length) {
+    redirect(`/admin/tags?error=${encodeURIComponent(`These addresses are already used by another tag: ${taken.join(", ")}`)}`);
   }
   redirect("/admin/tags?saved=1");
 }

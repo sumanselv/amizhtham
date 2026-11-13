@@ -42,7 +42,7 @@ export default async function TagPage({ params, searchParams }: Props) {
         {tag.name}
       </h1>
       <p lang="ta" className="mt-2 text-[var(--muted)]">
-        {tag.name} பயன்படுத்தும் {total} பதிவுகள்
+        {tag.name} பயன்படுத்தும் பதிவுகள்
       </p>
 
       {posts.length === 0 ? (

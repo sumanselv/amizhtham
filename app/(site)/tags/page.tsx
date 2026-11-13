@@ -28,7 +28,6 @@ export default async function TagsPage() {
                 className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white p-4 font-semibold hover:border-[var(--brand)] hover:shadow-sm"
               >
                 <span lang={langOf(tag.name)}>{tag.name}</span>
-                <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-xs text-[var(--brand-dark)]">{tag.post_count}</span>
               </Link>
             </li>
           ))}
