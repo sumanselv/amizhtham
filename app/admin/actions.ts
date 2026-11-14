@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, deletePost, getPostById, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
+import { createPost, deleteMessage, deletePost, getPostById, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { parseTagInput, slugify } from "@/lib/slug";
 
@@ -140,4 +140,13 @@ export async function saveTagNamesAction(formData: FormData): Promise<void> {
     redirect(`/admin/tags?error=${encodeURIComponent(`These addresses are already used by another tag: ${taken.join(", ")}`)}`);
   }
   redirect("/admin/tags?saved=1");
+}
+
+/* ------------------------------ contact messages ------------------------------ */
+
+export async function deleteMessageAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (Number.isInteger(id) && id > 0) await deleteMessage(id);
+  redirect("/admin/messages");
 }

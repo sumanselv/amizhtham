@@ -11,7 +11,8 @@ export default async function SiteFooter() {
         <p lang={lang} className="max-w-3xl">
           <strong className="text-[var(--ink)]">{ui.disclaimerTitle}</strong> {ui.disclaimerFooter}
         </p>
-        <p className="mt-4">
+        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <a href="/contact" lang={lang} className="font-semibold hover:text-[var(--ink)]">{ui.contact}</a>
           © {new Date().getFullYear()} <span lang="ta">{BRAND}</span>
         </p>
       </div>

@@ -33,6 +33,9 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
           <Link href="/" lang={lang} className="hover:text-[var(--ink)]">
             {HOME_LABEL}
           </Link>
+          <Link href="/contact" lang={lang} className="ml-6 hover:text-[var(--ink)]">
+            {ui.contact}
+          </Link>
         </nav>
         <div className="hidden md:ml-auto md:block md:w-72 lg:w-80">
           <SearchForm idPrefix="desktop" query={query} />
@@ -45,6 +48,9 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
         <MobileMenu>
           <Link href="/" lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
             {HOME_LABEL}
+          </Link>
+          <Link href="/contact" lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
+            {ui.contact}
           </Link>
           <SearchForm idPrefix="mobile" query={query} />
           <div className="mt-3">

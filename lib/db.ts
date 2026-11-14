@@ -53,6 +53,13 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(published, created_at)`,
   `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
   // Cached machine translations, keyed by language + hash of the source text.
+  `CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS translations (key TEXT PRIMARY KEY, text TEXT NOT NULL)`,
 ];
 
@@ -428,4 +435,38 @@ This is a **sample post** - edit or delete it from the admin page.`,
     const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
     if (row) await setPostTags(d1, row.id, s.tags.map((name) => ({ name })));
   }
+}
+
+/* ------------------------------ contact messages ------------------------------ */
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  body: string;
+  created_at: string;
+}
+
+/** Saves a message from the contact page. Returns false when too many arrived in the last hour. */
+export async function createMessage(name: string, email: string, body: string): Promise<boolean> {
+  const d1 = await db();
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const recent = await d1.prepare("SELECT COUNT(*) AS n FROM messages WHERE created_at > ?").bind(since).first<{ n: number }>();
+  if ((recent?.n ?? 0) >= 30) return false;
+  await d1
+    .prepare("INSERT INTO messages (name, email, body, created_at) VALUES (?, ?, ?, ?)")
+    .bind(name, email, body, new Date().toISOString())
+    .run();
+  return true;
+}
+
+export async function listMessages(): Promise<ContactMessage[]> {
+  const d1 = await db();
+  const rows = await d1.prepare("SELECT id, name, email, body, created_at FROM messages ORDER BY id DESC LIMIT 200").all<ContactMessage>();
+  return rows.results;
+}
+
+export async function deleteMessage(id: number): Promise<void> {
+  const d1 = await db();
+  await d1.prepare("DELETE FROM messages WHERE id = ?").bind(id).run();
 }
