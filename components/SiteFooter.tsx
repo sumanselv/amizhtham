@@ -15,7 +15,7 @@ export default async function SiteFooter() {
           <a href="/contact" lang={lang} className="font-semibold hover:text-[var(--ink)]">{ui.contact}</a>
           © {new Date().getFullYear()} <span lang={lang === "ta" ? "ta" : "en"}>{brandFor(lang)}</span>
         </p>
-        <p lang={lang === "ta" ? "ta" : "en"} className="mt-6 text-center text-lg font-bold text-[var(--brand-dark)] sm:text-xl">
+        <p lang={lang === "ta" ? "ta" : "en"} className="mt-6 text-center">
           {mottoFor(lang)}
         </p>
       </div>
