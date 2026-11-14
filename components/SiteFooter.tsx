@@ -1,4 +1,4 @@
-import { BRAND, MOTTO } from "@/lib/brand";
+import { MOTTO, brandFor } from "@/lib/brand";
 import { getLang } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -16,7 +16,7 @@ export default async function SiteFooter() {
         </p>
         <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
           <a href="/contact" lang={lang} className="font-semibold hover:text-[var(--ink)]">{ui.contact}</a>
-          © {new Date().getFullYear()} <span lang="ta">{BRAND}</span>
+          © {new Date().getFullYear()} <span lang={lang === "ta" ? "ta" : "en"}>{brandFor(lang)}</span>
         </p>
       </div>
     </footer>

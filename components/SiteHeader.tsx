@@ -3,16 +3,15 @@ import Logo from "./Logo";
 import MobileMenu from "./MobileMenu";
 import SearchForm from "./SearchForm";
 import LangSwitcher from "./LangSwitcher";
-import { BRAND } from "@/lib/brand";
+import { brandFor } from "@/lib/brand";
 import { getLang } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
-
-export const SITE_NAME = BRAND;
 
 export default async function SiteHeader({ query = "" }: { query?: string }) {
   const lang = await getLang();
   const ui = await getUi(lang);
   const HOME_LABEL = ui.home;
+  const brand = brandFor(lang);
   return (
     <header className="relative border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6 md:py-4">
@@ -21,11 +20,11 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
 
         <Link
           href="/"
-          lang="ta"
+          lang={lang === "ta" ? "ta" : "en"}
           className="mx-auto flex items-center gap-2 text-2xl font-bold text-[var(--brand-dark)] md:mx-0 md:text-[1.7rem]"
         >
           <Logo className="h-9 w-9 md:h-10 md:w-10" />
-          {SITE_NAME}
+          {brand}
         </Link>
 
         {/* Desktop: Home link and search box in the bar. */}

@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { brandFor } from "@/lib/brand";
 import { getLang } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const ui = await getUi(await getLang());
+  const lang = await getLang();
+  const ui = await getUi(lang);
+  const brand = brandFor(lang);
   return {
-    title: { default: ui.siteTitle, template: "%s | அமிழ்தம்" },
+    title: { default: `${brand} - ${ui.siteTagline}`, template: `%s | ${brand}` },
     description: ui.siteDescription,
     icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   };
