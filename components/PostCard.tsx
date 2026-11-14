@@ -20,7 +20,7 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
   const firstTag = post.tags[0]?.name ?? "🌿";
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -33,31 +33,29 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
-        {post.tags.length > 0 && (
-          <ul className="relative z-10 flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
-              <li key={tag.id}>
-                <Link
-                  href={tagHref(tag)}
-                  lang={langOf(tag.name)}
-                  className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
-                >
-                  {tag.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="relative z-10 flex h-7 flex-wrap gap-2 overflow-hidden">
+          {post.tags.map((tag) => (
+            <li key={tag.id}>
+              <Link
+                href={tagHref(tag)}
+                lang={langOf(tag.name)}
+                className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
+              >
+                {tag.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
 
-        <h2 lang={langOf(post.title)} className="text-lg font-bold leading-snug text-[var(--ink)]">
+        <h2 lang={langOf(post.title)} className="line-clamp-2 h-[3.25rem] text-lg font-bold leading-snug text-[var(--ink)]">
           <Link href={`/remedy/${encodeURIComponent(post.slug)}`} className="after:absolute after:inset-0 after:content-['']">
             {post.title}
           </Link>
         </h2>
 
-        <p lang={langOf(post.description)} className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{post.description}</p>
+        <p lang={langOf(post.description)} className="line-clamp-3 h-[4.5rem] text-sm leading-6 text-slate-700">{post.description}</p>
 
-        <p className="mt-auto pt-1 text-xs text-[var(--muted)]">{formatDate(post.created_at, locale)}</p>
+        <p className="mt-auto pt-1 text-xs text-slate-600">{formatDate(post.created_at, locale)}</p>
       </div>
     </article>
   );
