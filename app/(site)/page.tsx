@@ -3,6 +3,7 @@ import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, listPosts, listTags } from "@/lib/db";
 import { langOf, tagHref } from "@/lib/slug";
+import { brandFor } from "@/lib/brand";
 import { getLang, languageOf, localizePosts, localizeTags } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -20,14 +21,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <section className="mb-6 sm:mb-8">
-        <h1 lang={lang} className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-          {q ? `${ui.searchResults}: “${q}”` : ui.heroTitle}
+      {q ? (
+        <h1 lang={lang} className="mb-6 text-2xl font-extrabold tracking-tight sm:mb-8 sm:text-3xl">
+          {`${ui.searchResults}: “${q}”`}
         </h1>
-        {!q && <p lang={lang} className="mt-2 max-w-2xl text-sm text-[var(--muted)] sm:mt-3 sm:text-base">
-            {ui.heroSub}
-          </p>}
-      </section>
+      ) : (
+        <h1 className="sr-only">{brandFor(lang)}</h1>
+      )}
 
       {!q && tags.length > 0 && (
         <section aria-label={ui.browseByRemedy} className="mb-8 flex flex-wrap gap-2 sm:mb-10">
