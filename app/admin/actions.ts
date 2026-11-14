@@ -79,10 +79,23 @@ export async function savePostAction(formData: FormData): Promise<void> {
   const rawIntent = String(formData.get("intent") ?? "save");
   const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
   const tags = parseTagInput(String(formData.get("tags") ?? ""));
+  const poem = String(formData.get("poem") ?? "").replace(/\r\n?/g, "\n").trim();
+  const poet = String(formData.get("poet") ?? "").trim();
+  // Category: empty keeps tag addresses as /tag/name; "fruit" makes them /fruit/name.
+  const rawCategory = String(formData.get("category") ?? "").trim();
+  let category = "";
+  if (rawCategory) {
+    if (!slugify(rawCategory)) redirect(`${backTo}?error=${encodeURIComponent("Category must use English letters or numbers, e.g. fruit.")}`);
+    const cleaned = cleanSection(rawCategory);
+    if (cleaned === null) redirect(`${backTo}?error=${encodeURIComponent(`"${rawCategory}" is used by the site itself. Choose another category name.`)}`);
+    category = cleaned;
+  }
 
   if (!title) redirect(`${backTo}?error=${encodeURIComponent("Title is required.")}`);
   if (title.length > 150) redirect(`${backTo}?error=${encodeURIComponent("Title is too long (max 150 characters).")}`);
   if (description.length > 300) redirect(`${backTo}?error=${encodeURIComponent("Description is too long (max 300 characters).")}`);
+  if (poem.length > 3000) redirect(`${backTo}?error=${encodeURIComponent("Poem is too long (max 3000 characters).")}`);
+  if (poet.length > 100) redirect(`${backTo}?error=${encodeURIComponent("Poet name is too long (max 100 characters).")}`);
   if (content.length > 100_000) redirect(`${backTo}?error=${encodeURIComponent("Post body is too long.")}`);
 
   const existing = id ? await getPostById(id) : null;
@@ -102,7 +115,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
   }
 
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, category, poem, poet };
 
   let postId = id;
   if (id) {

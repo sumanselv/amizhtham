@@ -14,6 +14,9 @@ const NOTICES: Record<string, string> = {
 export default function PostForm({ post, error, notice, tagSuggestions }: { post?: PostWithTags; error?: string; notice?: string; tagSuggestions: string[] }) {
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
   const live = post?.published === 1;
+  // Prefill the category when all of this post's tags share one (other than the default "tag").
+  const sections = [...new Set(post?.tags.map((t) => t.section) ?? [])];
+  const categoryDefault = sections.length === 1 && sections[0] !== "tag" ? sections[0] : "";
   const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
@@ -63,6 +66,17 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
       </div>
 
       <div>
+        <label htmlFor="category" className="mb-1 block text-sm font-semibold">
+          Category <span className="font-normal text-[var(--muted)]">(optional, English)</span>
+        </label>
+        <input id="category" name="category" defaultValue={categoryDefault} maxLength={30} className="field" placeholder="fruit" />
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Leave empty for the usual <code>/tag/amla</code>. Type <code>fruit</code> and this post&apos;s tags use <code>/fruit/amla</code> instead
+          (old addresses redirect). It changes the tags above, so every post with those tags follows.
+        </p>
+      </div>
+
+      <div>
         <label htmlFor="description" className="mb-1 block text-sm font-semibold">
           Short description <span className="font-normal text-[var(--muted)]">(shown on the home page card)</span>
         </label>
@@ -87,6 +101,21 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         ) : (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Image upload is off until R2 is enabled on the Cloudflare account (see README).</p>
         )}
+      </div>
+
+      <div className="rounded-xl border border-[var(--line)] bg-slate-50 p-4">
+        <p className="text-sm font-semibold">Poem section <span className="font-normal text-[var(--muted)]">(optional)</span></p>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          An original verse. It is shown in slanted type on the post and is <strong>never translated</strong>, in any language.
+        </p>
+        <label htmlFor="poem" className="mb-1 mt-3 block text-sm font-semibold">
+          Poem
+        </label>
+        <textarea id="poem" name="poem" rows={5} maxLength={3000} defaultValue={post?.poem} className="field italic" placeholder="One line per row, as it should appear" />
+        <label htmlFor="poet" className="mb-1 mt-3 block text-sm font-semibold">
+          Poet
+        </label>
+        <input id="poet" name="poet" maxLength={100} defaultValue={post?.poet} className="field" placeholder="Poet's name" />
       </div>
 
       <div>

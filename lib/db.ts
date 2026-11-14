@@ -18,6 +18,10 @@ export interface Post {
   description: string;
   content: string;
   cover_image: string | null;
+  /** Optional original verse, shown in slanted type and never translated. */
+  poem: string;
+  /** Name of the poet, never translated. */
+  poet: string;
   published: number;
   created_at: string;
   updated_at: string;
@@ -81,6 +85,13 @@ export function db(): Promise<D1Like> {
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
   await d1.batch(SCHEMA.map((sql) => d1.prepare(sql)));
+  // Older databases: add the poem / poet columns.
+  const postCols = await d1.prepare("PRAGMA table_info(posts)").all<{ name: string }>();
+  for (const col of ["poem", "poet"]) {
+    if (!postCols.results.some((c) => c.name === col)) {
+      await d1.prepare(`ALTER TABLE posts ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`).run();
+    }
+  }
   // Older databases: add the tag address prefix column.
   const cols = await d1.prepare("PRAGMA table_info(tags)").all<{ name: string }>();
   if (!cols.results.some((c) => c.name === "section")) {
@@ -271,7 +282,8 @@ export function tagSlugFor(name: string, typed?: string): string {
   return typed || slugify(name) || slugify(englishNameFor(name));
 }
 
-async function setPostTags(d1: D1Like, postId: number, tags: TagInput[]): Promise<void> {
+/** Save a post's tags. A non-empty `category` becomes the address section of those tags (/category/tag-name); empty leaves them as they are. */
+async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], category = ""): Promise<void> {
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(postId).run();
   for (const input of tags) {
     const name = input.name;
@@ -293,6 +305,9 @@ async function setPostTags(d1: D1Like, postId: number, tags: TagInput[]): Promis
         tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
       }
     }
+    if (tag && category) {
+      await d1.prepare("UPDATE tags SET section = ? WHERE id = ?").bind(category, tag.id).run();
+    }
     if (tag) {
       await d1.prepare("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)").bind(postId, tag.id).run();
     }
@@ -309,6 +324,10 @@ export interface PostInput {
   cover_image: string | null;
   published: boolean;
   tags: TagInput[];
+  /** Address section for this post's tags, e.g. "fruit" gives /fruit/amla. Empty keeps the current section ("tag" for new tags). */
+  category?: string;
+  poem?: string;
+  poet?: string;
 }
 
 export async function createPost(input: PostInput): Promise<number> {
@@ -317,14 +336,14 @@ export async function createPost(input: PostInput): Promise<number> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title));
   await d1
     .prepare(
-      `INSERT INTO posts (title, slug, description, content, cover_image, published, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, published, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.published ? 1 : 0, now, now)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.published ? 1 : 0, now, now)
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
-  await setPostTags(d1, id, input.tags);
+  await setPostTags(d1, id, input.tags, input.category);
   return id;
 }
 
@@ -333,12 +352,12 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title), id);
   await d1
     .prepare(
-      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, published = ?, updated_at = ?
+      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, published = ?, updated_at = ?
        WHERE id = ?`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.published ? 1 : 0, new Date().toISOString(), id)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
-  await setPostTags(d1, id, input.tags);
+  await setPostTags(d1, id, input.tags, input.category);
 }
 
 export async function deletePost(id: number): Promise<string | null> {

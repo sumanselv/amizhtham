@@ -90,6 +90,20 @@ export default async function RemedyPage({ params }: Props) {
 
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
+      {post.poem && (
+        // Original verse: kept exactly as written (never machine-translated, and browsers are told not to translate it either).
+        <figure translate="no" className="notranslate mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
+          <blockquote lang={langOf(post.poem)} className="whitespace-pre-line text-lg italic leading-8 text-[var(--ink)] sm:text-xl sm:leading-9">
+            {post.poem}
+          </blockquote>
+          {post.poet && (
+            <figcaption lang={langOf(post.poet)} className="mt-3 text-sm font-semibold not-italic text-[var(--brand-dark)]">
+              — {post.poet}
+            </figcaption>
+          )}
+        </figure>
+      )}
+
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
           <h2 lang={lang} className="mb-4 text-xl font-bold">{ui.related}</h2>
