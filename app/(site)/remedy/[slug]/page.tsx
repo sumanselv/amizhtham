@@ -90,10 +90,6 @@ export default async function RemedyPage({ params }: Props) {
 
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      <p lang={lang} className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:mt-10">
-        {ui.disclaimerPost}
-      </p>
-
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
           <h2 lang={lang} className="mb-4 text-xl font-bold">{ui.related}</h2>

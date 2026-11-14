@@ -22,11 +22,7 @@ const TA = {
   older: "பழையவை →",
   page: "பக்கம்",
   pagesLabel: "பக்கங்கள்",
-  disclaimerTitle: "மருத்துவ அறிவிப்பு:",
-  disclaimerFooter:
-    "இந்தத் தளத்தில் உள்ள வைத்தியங்கள் பாரம்பரிய வீட்டு வைத்தியங்கள்; அவை பொதுவான தகவலுக்காக மட்டுமே பகிரப்படுகின்றன. இவை மருத்துவ ஆலோசனை அல்ல; மருத்துவரின் ஆலோசனைக்கு மாற்றும் அல்ல. நீங்கள் கர்ப்பமாக இருந்தால், மருந்துகள் உட்கொண்டால் அல்லது உடல்நலப் பிரச்சினை இருந்தால், முதலில் தகுந்த நிபுணரிடம் ஆலோசியுங்கள்.",
-  disclaimerPost:
-    "இந்த வைத்தியம் பொதுவான தகவலுக்காக மட்டுமே பகிரப்படுகிறது; இது மருத்துவ ஆலோசனை அல்ல. நீங்கள் கர்ப்பமாக இருந்தால், மருந்துகள் உட்கொண்டால் அல்லது உடல்நலப் பிரச்சினை இருந்தால், மருத்துவரிடம் கேளுங்கள்.",
+  disclaimerFooter: "பாரம்பரிய வீட்டு வைத்தியங்கள், பொதுவான தகவலுக்காக மட்டும். மருத்துவ ஆலோசனைக்கு மாற்று அல்ல.",
   allRemedies: "அனைத்து வைத்தியங்கள்",
   allRemediesSub: "ஒரு பொருளைத் தேர்ந்தெடுத்தால், அதைப் பயன்படுத்தும் அனைத்துப் பதிவுகளும் தெரியும்.",
   noTags: "இன்னும் குறிச்சொற்கள் இல்லை.",
@@ -65,11 +61,7 @@ const EN: Ui = {
   older: "Older →",
   page: "Page",
   pagesLabel: "Pages",
-  disclaimerTitle: "Medical notice:",
-  disclaimerFooter:
-    "The remedies on this site are traditional home remedies, shared for general information only. They are not medical advice and do not replace a doctor's advice. If you are pregnant, take medication or have a health condition, please consult a qualified professional first.",
-  disclaimerPost:
-    "This remedy is shared for general information only and is not medical advice. If you are pregnant, take medication or have a health condition, ask your doctor.",
+  disclaimerFooter: "Traditional home remedies, shared for general information only. Not a substitute for medical advice.",
   allRemedies: "All remedies",
   allRemediesSub: "Choose an ingredient to see every post that uses it.",
   noTags: "No tags yet.",
