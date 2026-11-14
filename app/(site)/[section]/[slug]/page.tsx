@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, getTagBySlug, listPosts } from "@/lib/db";
-import { decodeParam, langOf } from "@/lib/slug";
+import { decodeParam, langOf, tagHref } from "@/lib/slug";
 import { getLang, languageOf, localizePosts, localizeTags } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> };
+type Props = { params: Promise<{ section: string; slug: string }>; searchParams: Promise<{ page?: string }> };
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { slug } = await params;
@@ -22,15 +22,17 @@ export async function generateMetadata({ params }: Pick<Props, "params">): Promi
   return {
     title: `${tag.name} ${ui.tagSuffix}`,
     description: `${tag.name} ${ui.tagSuffix}`,
-    alternates: { canonical: `/tag/${encodeURIComponent(tag.slug)}` },
+    alternates: { canonical: tagHref(rawTag) },
   };
 }
 
 export default async function TagPage({ params, searchParams }: Props) {
-  const { slug } = await params;
+  const { section, slug } = await params;
   const sp = await searchParams;
   const rawTag = await getTagBySlug(decodeParam(slug));
   if (!rawTag) notFound();
+  // Old or mistyped prefix (e.g. /tag/amla after it moved to /fruit/amla): go to the current address.
+  if (decodeParam(section) !== rawTag.section) redirect(tagHref(rawTag) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
 
   const lang = await getLang();
   const ui = await getUi(lang);
@@ -67,7 +69,7 @@ export default async function TagPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={`/tag/${encodeURIComponent(tag.slug)}`} />
+      <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={tagHref(rawTag)} />
     </>
   );
 }

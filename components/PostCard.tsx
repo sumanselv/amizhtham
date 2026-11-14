@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
-import { formatDate, langOf } from "@/lib/slug";
+import { formatDate, langOf, tagHref } from "@/lib/slug";
 
 const PLACEHOLDER_TONES = [
   "from-emerald-100 to-lime-50",
@@ -38,7 +38,7 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
             {post.tags.map((tag) => (
               <li key={tag.id}>
                 <Link
-                  href={`/tag/${encodeURIComponent(tag.slug)}`}
+                  href={tagHref(tag)}
                   lang={langOf(tag.name)}
                   className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
                 >

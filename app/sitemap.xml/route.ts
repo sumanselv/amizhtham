@@ -1,3 +1,4 @@
+import { tagHref } from "@/lib/slug";
 import { listSlugsForSitemap } from "@/lib/db";
 
 function esc(s: string): string {
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
   const urls = [
     `<url><loc>${origin}/</loc></url>`,
     `<url><loc>${origin}/tags</loc></url>`,
-    ...tags.map((t) => `<url><loc>${esc(`${origin}/tag/${encodeURIComponent(t)}`)}</loc></url>`),
+    ...tags.map((t) => `<url><loc>${esc(`${origin}${tagHref(t)}`)}</loc></url>`),
     ...posts.map(
       (p) => `<url><loc>${esc(`${origin}/remedy/${encodeURIComponent(p.slug)}`)}</loc><lastmod>${esc(p.updated_at.slice(0, 10))}</lastmod></url>`,
     ),

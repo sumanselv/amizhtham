@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listTags } from "@/lib/db";
-import { langOf } from "@/lib/slug";
+import { langOf, tagHref } from "@/lib/slug";
 import { getLang, localizeTags } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -28,7 +28,7 @@ export default async function TagsPage() {
           {tags.map((tag) => (
             <li key={tag.id}>
               <Link
-                href={`/tag/${encodeURIComponent(tag.slug)}`}
+                href={tagHref(tag)}
                 className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white p-4 font-semibold hover:border-[var(--brand)] hover:shadow-sm"
               >
                 <span lang={langOf(tag.name)}>{tag.name}</span>

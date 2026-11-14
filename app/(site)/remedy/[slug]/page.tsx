@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
-import { decodeParam, formatDate, langOf } from "@/lib/slug";
+import { decodeParam, formatDate, langOf, tagHref } from "@/lib/slug";
 import { getLang, languageOf, localizePost, localizePosts } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -49,7 +49,7 @@ export default async function RemedyPage({ params }: Props) {
         {post.tags[0] && (
           <>
             {" / "}
-            <Link href={`/tag/${encodeURIComponent(post.tags[0].slug)}`} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
+            <Link href={tagHref(post.tags[0])} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
               {post.tags[0].name}
             </Link>
           </>
@@ -64,7 +64,7 @@ export default async function RemedyPage({ params }: Props) {
         {post.tags.map((tag) => (
           <Link
             key={tag.id}
-            href={`/tag/${encodeURIComponent(tag.slug)}`}
+            href={tagHref(tag)}
             lang={langOf(tag.name)}
             className="rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
           >

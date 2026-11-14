@@ -33,6 +33,20 @@ export function langOf(text: string): string {
   return "en";
 }
 
+/** First address segments that already belong to the site and cannot be used as a tag section. */
+export const RESERVED_SECTIONS = ["admin", "remedy", "tags", "contact", "lang", "img", "icon", "sitemap", "robots", "api", "_next", "static", "assets"];
+
+/** Clean a tag section typed by the admin (English a-z, 0-9, hyphens). Empty becomes "tag"; returns null for a reserved word. */
+export function cleanSection(raw: string): string | null {
+  const s = slugify(raw) || "tag";
+  return RESERVED_SECTIONS.includes(s) ? null : s;
+}
+
+/** Public address of a tag, e.g. /tag/amla or /fruit/amla. */
+export function tagHref(tag: { section?: string; slug: string }): string {
+  return `/${tag.section || "tag"}/${encodeURIComponent(tag.slug)}`;
+}
+
 /** Route params may arrive percent-encoded; decode safely. */
 export function decodeParam(value: string): string {
   try {

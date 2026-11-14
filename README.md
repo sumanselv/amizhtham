@@ -105,7 +105,7 @@ remembered in a cookie. Supported: Tamil, English, Hindi, Telugu, Kannada, Malay
   table, so each text is translated only once. Editing a post re-translates only the text that changed.
 - Up to 30 new translations are made per page view; anything not yet translated shows in its original language
   and fills in on the next visit.
-- Web addresses always stay English (`/tag/amla`, `/remedy/<slug>`).
+- Web addresses always stay English (`/tag/amla`, `/remedy/<slug>`). The `tag` part can be changed per tag in Admin > Tags (e.g. `/fruit/amla`); the old address redirects.
 - Interface text lives in `lib/ui.ts` (Tamil + hand-written English; other languages are machine-translated).
 - The language menu (🌐) sets a cookie through `/lang?l=<code>`. The admin area stays in English.
 - To add a language, add it to `LANGUAGES` in `lib/i18n.ts` (it must be supported by the m2m100 model) and to `lang` CSS if it needs a font.

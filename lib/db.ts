@@ -6,6 +6,8 @@ export interface Tag {
   id: number;
   name: string;
   slug: string;
+  /** First part of the tag address, "tag" by default (/tag/amla); the admin can change it (/fruit/amla). */
+  section: string;
   post_count?: number;
 }
 
@@ -79,6 +81,11 @@ export function db(): Promise<D1Like> {
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
   await d1.batch(SCHEMA.map((sql) => d1.prepare(sql)));
+  // Older databases: add the tag address prefix column.
+  const cols = await d1.prepare("PRAGMA table_info(tags)").all<{ name: string }>();
+  if (!cols.results.some((c) => c.name === "section")) {
+    await d1.prepare("ALTER TABLE tags ADD COLUMN section TEXT NOT NULL DEFAULT 'tag'").run();
+  }
   const seeded = await d1.prepare("SELECT value FROM meta WHERE key = 'seeded'").first();
   if (!seeded) {
     await d1.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('seeded', '1')").run();
@@ -138,7 +145,7 @@ async function attachTags(d1: D1Like, posts: Post[]): Promise<PostWithTags[]> {
   const marks = ids.map(() => "?").join(",");
   const rows = await d1
     .prepare(
-      `SELECT pt.post_id AS post_id, t.id AS id, t.name AS name, t.slug AS slug
+      `SELECT pt.post_id AS post_id, t.id AS id, t.name AS name, t.slug AS slug, t.section AS section
        FROM post_tags pt JOIN tags t ON t.id = pt.tag_id
        WHERE pt.post_id IN (${marks}) ORDER BY t.name`,
     )
@@ -147,7 +154,7 @@ async function attachTags(d1: D1Like, posts: Post[]): Promise<PostWithTags[]> {
   const byPost = new Map<number, Tag[]>();
   for (const r of rows.results) {
     const list = byPost.get(r.post_id) ?? [];
-    list.push({ id: r.id, name: r.name, slug: r.slug });
+    list.push({ id: r.id, name: r.name, slug: r.slug, section: r.section });
     byPost.set(r.post_id, list);
   }
   return posts.map((p) => ({ ...p, tags: byPost.get(p.id) ?? [] }));
@@ -172,7 +179,7 @@ export async function getPostById(id: number): Promise<PostWithTags | null> {
 
 export async function getTagBySlug(slug: string): Promise<Tag | null> {
   const d1 = await db();
-  return d1.prepare("SELECT id, name, slug FROM tags WHERE slug = ?").bind(slug).first<Tag>();
+  return d1.prepare("SELECT id, name, slug, section FROM tags WHERE slug = ?").bind(slug).first<Tag>();
 }
 
 /** All tags that have at least one published post, with counts. */
@@ -180,7 +187,7 @@ export async function listTags(): Promise<Tag[]> {
   const d1 = await db();
   const rows = await d1
     .prepare(
-      `SELECT t.id AS id, t.name AS name, t.slug AS slug, COUNT(p.id) AS post_count
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, COUNT(p.id) AS post_count
        FROM tags t
        JOIN post_tags pt ON pt.tag_id = t.id
        JOIN posts p ON p.id = pt.post_id AND p.published = 1
@@ -195,7 +202,7 @@ export async function listAllTags(): Promise<Tag[]> {
   const d1 = await db();
   const rows = await d1
     .prepare(
-      `SELECT t.id AS id, t.name AS name, t.slug AS slug, COUNT(pt.post_id) AS post_count
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, COUNT(pt.post_id) AS post_count
        FROM tags t LEFT JOIN post_tags pt ON pt.tag_id = t.id GROUP BY t.id ORDER BY t.name`,
     )
     .all<Tag>();
@@ -203,11 +210,11 @@ export async function listAllTags(): Promise<Tag[]> {
 }
 
 /** Change a tag's display name and English address. Returns "slug-taken" if another tag already uses the address. */
-export async function updateTag(id: number, name: string, slug: string): Promise<"ok" | "slug-taken"> {
+export async function updateTag(id: number, name: string, slug: string, section = "tag"): Promise<"ok" | "slug-taken"> {
   const d1 = await db();
   const clash = await d1.prepare("SELECT id FROM tags WHERE slug = ? AND id != ?").bind(slug, id).first();
   if (clash) return "slug-taken";
-  await d1.prepare("UPDATE tags SET name = ?, slug = ? WHERE id = ?").bind(name, slug, id).run();
+  await d1.prepare("UPDATE tags SET name = ?, slug = ?, section = ? WHERE id = ?").bind(name, slug, section, id).run();
   return "ok";
 }
 
@@ -234,13 +241,13 @@ export async function listRelatedPosts(post: PostWithTags, limit = 3): Promise<P
   return attachTags(d1, rows.results);
 }
 
-export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; updated_at: string }[]; tags: string[] }> {
+export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; updated_at: string }[]; tags: { section: string; slug: string }[] }> {
   const d1 = await db();
   const posts = await d1
     .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 ORDER BY created_at DESC")
     .all<{ slug: string; updated_at: string }>();
   const tags = await listTags();
-  return { posts: posts.results, tags: tags.map((t) => t.slug) };
+  return { posts: posts.results, tags: tags.map((t) => ({ section: t.section, slug: t.slug })) };
 }
 
 /* ------------------------------ writing ------------------------------ */

@@ -2,7 +2,7 @@ import Link from "next/link";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, listPosts, listTags } from "@/lib/db";
-import { langOf } from "@/lib/slug";
+import { langOf, tagHref } from "@/lib/slug";
 import { getLang, languageOf, localizePosts, localizeTags } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -34,7 +34,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {tags.map((tag) => (
             <Link
               key={tag.id}
-              href={`/tag/${encodeURIComponent(tag.slug)}`}
+              href={tagHref(tag)}
               lang={langOf(tag.name)}
               className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)] hover:text-[var(--brand-dark)] sm:px-4"
             >

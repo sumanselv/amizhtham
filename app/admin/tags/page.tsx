@@ -17,8 +17,9 @@ export default async function AdminTagsPage({ searchParams }: { searchParams: Pr
       <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         <h1 className="text-2xl font-bold">Tags</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          The name can be in any language. The web address is always English, for example <code>/tag/amla</code>. Changing an address
-          breaks old links to that tag.
+          The name can be in any language. The web address is always English and has two parts: a section and a name, for example{" "}
+          <code>/tag/amla</code>. Change the section to group tags, e.g. <code>/fruit/amla</code>. Old links to the previous address
+          redirect to the new one.
         </p>
 
         {sp.saved && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">Tags saved.</p>}
@@ -36,7 +37,7 @@ export default async function AdminTagsPage({ searchParams }: { searchParams: Pr
           <form action={saveTagNamesAction} className="mt-6 space-y-4 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
             <div className="hidden gap-4 text-xs font-semibold uppercase tracking-wide text-[var(--muted)] sm:flex">
               <span className="flex-1">Name (any language)</span>
-              <span className="w-56">English web address</span>
+              <span className="w-72">English web address (section / name)</span>
             </div>
             {tags.map((tag) => (
               <div key={tag.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -45,11 +46,13 @@ export default async function AdminTagsPage({ searchParams }: { searchParams: Pr
                   defaultValue={tag.name}
                   maxLength={40}
                   lang={langOf(tag.name)}
-                  aria-label={`Name for /tag/${tag.slug}`}
+                  aria-label={`Name for /${tag.section}/${tag.slug}`}
                   className="field sm:flex-1"
                 />
-                <div className="flex items-center gap-1 sm:w-56">
-                  <span className="text-sm text-[var(--muted)]">/tag/</span>
+                <div className="flex items-center gap-1 sm:w-72">
+                  <span className="text-sm text-[var(--muted)]">/</span>
+                  <input name={`section_${tag.id}`} defaultValue={tag.section} maxLength={30} aria-label={`Address section for ${tag.name}`} className="field w-28 shrink-0" />
+                  <span className="text-sm text-[var(--muted)]">/</span>
                   <input name={`slug_${tag.id}`} defaultValue={tag.slug} maxLength={80} aria-label={`English address for ${tag.name}`} className="field" />
                 </div>
               </div>

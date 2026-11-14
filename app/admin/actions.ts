@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
 import { createPost, deleteMessage, deletePost, getPostById, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { parseTagInput, slugify } from "@/lib/slug";
+import { cleanSection, parseTagInput, slugify } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -127,14 +127,25 @@ export async function saveTagNamesAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const tags = await listAllTags();
   const taken: string[] = [];
+  const reserved: string[] = [];
   for (const tag of tags) {
     const rawName = formData.get(`tag_${tag.id}`);
     const rawSlug = formData.get(`slug_${tag.id}`);
     if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
     const name = rawName.trim().replace(/\s+/g, " ").slice(0, 40) || tag.name;
     const slug = slugify(rawSlug) || tag.slug;
-    if (name === tag.name && slug === tag.slug) continue;
-    if ((await updateTag(tag.id, name, slug)) === "slug-taken") taken.push(slug);
+    const rawSection = formData.get(`section_${tag.id}`);
+    let section = tag.section;
+    if (typeof rawSection === "string") {
+      const cleaned = cleanSection(rawSection);
+      if (cleaned === null) reserved.push(rawSection.trim());
+      else section = cleaned;
+    }
+    if (name === tag.name && slug === tag.slug && section === tag.section) continue;
+    if ((await updateTag(tag.id, name, slug, section)) === "slug-taken") taken.push(slug);
+  }
+  if (reserved.length) {
+    redirect(`/admin/tags?error=${encodeURIComponent(`These sections are used by the site itself, choose another: ${reserved.join(", ")}`)}`);
   }
   if (taken.length) {
     redirect(`/admin/tags?error=${encodeURIComponent(`These addresses are already used by another tag: ${taken.join(", ")}`)}`);
