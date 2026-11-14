@@ -32,7 +32,6 @@ const TA = {
   send: "அனுப்பு",
   contactSent: "நன்றி! உங்கள் செய்தி கிடைத்தது.",
   contactError: "செய்தியை அனுப்ப முடியவில்லை. பெயர் மற்றும் செய்தியை நிரப்பி, மீண்டும் முயலுங்கள்.",
-  siteTagline: "எளிய வீட்டு வைத்தியம்",
   siteDescription: "எளிய பொருட்களுடன் பாரம்பரிய வீட்டு வைத்தியங்கள். நெல்லிக்காய், மஞ்சள், இஞ்சி போன்ற பொருட்கள் வாரியாகப் பாருங்கள்.",
 };
 
@@ -69,7 +68,6 @@ const EN: Ui = {
   send: "Send",
   contactSent: "Thank you! We received your message.",
   contactError: "Could not send your message. Please fill in your name and message and try again.",
-  siteTagline: "Simple home remedies",
   siteDescription: "Traditional home remedies made with simple ingredients. Browse by ingredient such as amla, turmeric and ginger.",
 };
 

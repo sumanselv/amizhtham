@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const ui = await getUi(lang);
   const brand = brandFor(lang);
   return {
-    title: { default: `${brand} - ${ui.siteTagline}`, template: `%s | ${brand}` },
+    title: { default: brand, template: `%s | ${brand}` },
     description: ui.siteDescription,
     icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   };
