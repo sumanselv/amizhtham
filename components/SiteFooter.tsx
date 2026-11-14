@@ -1,4 +1,4 @@
-import { MOTTO, brandFor } from "@/lib/brand";
+import { brandFor, mottoFor } from "@/lib/brand";
 import { getLang } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
@@ -8,8 +8,8 @@ export default async function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-[var(--line)] bg-white">
       <div className="mx-auto max-w-6xl px-4 py-8 text-sm sm:px-6 text-[var(--muted)]">
-        <p lang="ta" className="mb-5 text-center text-lg font-bold text-[var(--brand-dark)] sm:text-xl">
-          {MOTTO}
+        <p lang={lang === "ta" ? "ta" : "en"} className="mb-5 text-center text-lg font-bold text-[var(--brand-dark)] sm:text-xl">
+          {mottoFor(lang)}
         </p>
         <p lang={lang} className="max-w-3xl">
           <strong className="text-[var(--ink)]">{ui.disclaimerTitle}</strong> {ui.disclaimerFooter}
