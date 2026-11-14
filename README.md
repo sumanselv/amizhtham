@@ -101,10 +101,11 @@ The site always opens in Tamil (the primary language). Visitors can switch with 
 remembered in a cookie. Supported: Tamil, English, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati.
 
 - Posts are written once (Tamil is the source). Titles, descriptions, bodies and tag names are translated on
-  demand with Workers AI (`AI` binding, model `@cf/meta/m2m100-1.2b`) and cached forever in the D1 `translations`
+  demand with Workers AI (`AI` binding, model `@cf/google/gemma-4-26b-a4b-it` with thinking off) and cached in the D1 `translations`
   table, so each text is translated only once. Editing a post re-translates only the text that changed.
 - Up to 30 new translations are made per page view; anything not yet translated shows in its original language
   and fills in on the next visit.
+- Nonsense output (empty, repeated words, absurd length) is rejected and not cached; that text then stays in its original language. In English, tags written in another script are named from their English web address (`scutch-grass` shows "Scutch grass"). To refresh all translations, bump `CACHE_VERSION` in `lib/i18n.ts`.
 - Web addresses always stay English (`/tag/amla`, `/remedy/<slug>`). The `tag` part can be changed per tag in Admin > Tags (e.g. `/fruit/amla`); the old address redirects.
 - Interface text lives in `lib/ui.ts` (Tamil + hand-written English; other languages are machine-translated).
 - The language menu (🌐) sets a cookie through `/lang?l=<code>`. The admin area stays in English.

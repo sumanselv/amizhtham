@@ -75,6 +75,7 @@ const EN: Ui = {
 export const getUi = cache(async (lang: string): Promise<Ui> => {
   if (lang === "ta") return TA;
   if (lang === "en") return EN;
-  const map = await translateMany(lang, Object.values(TA));
-  return Object.fromEntries(Object.entries(TA).map(([k, v]) => [k, map.get(v) ?? EN[k as UiKey]])) as Ui;
+  // Translate from the hand-written English (more reliable than Tamil as a source for other languages).
+  const map = await translateMany(lang, Object.values(EN));
+  return Object.fromEntries(Object.entries(EN).map(([k, v]) => [k, map.get(v) ?? v])) as Ui;
 });

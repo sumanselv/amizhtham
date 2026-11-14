@@ -89,6 +89,12 @@ export function db(): Promise<D1Like> {
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
   await d1.batch(SCHEMA.map((sql) => d1.prepare(sql)));
+  // Machine translations made by the first (poor) model are discarded once.
+  const cleaned = await d1.prepare("SELECT value FROM meta WHERE key = 'translations_v2'").first();
+  if (!cleaned) {
+    await d1.prepare("DELETE FROM translations").run();
+    await d1.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('translations_v2', '1')").run();
+  }
   // Older databases: add the poem / poet columns.
   const postCols = await d1.prepare("PRAGMA table_info(posts)").all<{ name: string }>();
   if (!postCols.results.some((c) => c.name === "poet_image")) {

@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { db } from "./db";
+import { db, isPlaceholderSlug } from "./db";
 import { getEnv } from "./env";
 import { langOf } from "./slug";
 import type { Post, PostWithTags, Tag } from "./db";
+import type { AiLike } from "./env";
 
 export interface Language {
   code: string;
@@ -51,7 +52,62 @@ export const getLang = cache(async (): Promise<string> => {
 
 /* ------------------------------ translation ------------------------------ */
 
-const MODEL = "@cf/meta/m2m100-1.2b";
+/** Gemma 4 with thinking switched off: accurate for Tamil and other Indian languages, ~0.5 s per text. (The earlier m2m100 model gave poor results.) */
+const MODEL = "@cf/google/gemma-4-26b-a4b-it";
+/** Bump when the model or prompt changes, so older saved translations are ignored. */
+const CACHE_VERSION = "v2";
+const AI_TIMEOUT_MS = 25_000;
+
+const LANG_NAMES: Record<string, string> = {
+  ta: "Tamil",
+  en: "English",
+  hi: "Hindi",
+  te: "Telugu",
+  kn: "Kannada",
+  ml: "Malayalam",
+  bn: "Bengali",
+  mr: "Marathi",
+  gu: "Gujarati",
+};
+
+/** Clean up a model answer and reject anything that looks like nonsense (empty, runaway repetition, absurd length). */
+export function cleanTranslation(source: string, raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  let t = raw.trim();
+  t = t.replace(/^(translation|translated text)\s*:\s*/i, "").replace(/^["“”'‘’]+|["“”'‘’]+$/g, "").trim();
+  if (!source.includes("\n") && t.includes("\n")) t = t.split("\n").find((l) => l.trim())?.trim() ?? "";
+  if (!t) return null;
+  if (/(\S+)(\s+\1){3,}/u.test(t)) return null; // "Issue Issue Issue Issue"
+  if (source.length > 12) {
+    const ratio = t.length / source.length;
+    if (ratio < 0.25 || ratio > 6) return null;
+  }
+  return t;
+}
+
+async function translateOne(ai: AiLike, text: string, from: string, to: string): Promise<string | null> {
+  const target = LANG_NAMES[to] ?? to;
+  const system =
+    `You are a professional translator for a traditional home-remedy website (Tamil, Siddha and Ayurvedic folk remedies). ` +
+    `Translate the user's ${LANG_NAMES[from] ?? from} text into natural ${target}. ` +
+    `Translate faithfully; do not add, explain or comment. Keep plant, herb, spice and ingredient names accurate, using the common ${target} name. ` +
+    `Keep numbers, brackets and punctuation. A short word or name stays short. Output ONLY the translation.`;
+  const call = ai.run(MODEL, {
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: text.slice(0, MAX_TEXT) },
+    ],
+    max_tokens: 1500,
+    temperature: 0.1,
+    chat_template_kwargs: { enable_thinking: false },
+  });
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("translation timed out")), AI_TIMEOUT_MS));
+  const res = (await Promise.race([call, timeout])) as {
+    response?: string;
+    choices?: { message?: { content?: string | null } }[];
+  } | null;
+  return cleanTranslation(text, res?.choices?.[0]?.message?.content ?? res?.response);
+}
 /** At most this many new (uncached) translations per page view; the rest show in the original language and fill in on the next visit. */
 const MAX_NEW_PER_REQUEST = 30;
 const CONCURRENCY = 6;
@@ -74,7 +130,7 @@ export async function translateMany(lang: string, texts: string[]): Promise<Map<
 
   try {
     const d1 = await db();
-    const keyed = await Promise.all(todo.map(async (t) => ({ text: t, key: `${lang}:${await hash(t)}` })));
+    const keyed = await Promise.all(todo.map(async (t) => ({ text: t, key: `${CACHE_VERSION}:${lang}:${await hash(t)}` })));
 
     // 1) Cached translations, looked up in a few batched queries.
     const found = new Map<string, string>();
@@ -105,12 +161,7 @@ export async function translateMany(lang: string, texts: string[]): Promise<Map<
       while (next < batch.length) {
         const k = batch[next++];
         try {
-          const res = (await ai.run(MODEL, {
-            text: k.text.slice(0, MAX_TEXT),
-            source_lang: langOf(k.text),
-            target_lang: lang,
-          })) as { translated_text?: string } | null;
-          const translated = res?.translated_text?.trim();
+          const translated = await translateOne(ai, k.text, langOf(k.text), lang);
           if (translated) {
             out.set(k.text, translated);
             fresh.push({ key: k.key, text: translated, from: k.text });
@@ -172,25 +223,39 @@ async function translateMarkdown(lang: string, markdown: string, map: Map<string
     .join("\n");
 }
 
-function tagTexts(tags: Tag[]): string[] {
-  return tags.map((t) => t.name);
+/** Tag names that need machine translation (English tags with an English address are named from the address instead). */
+function tagTexts(tags: Tag[], lang: string): string[] {
+  return tags.filter((t) => !(lang === "en" && langOf(t.name) !== "en" && englishNameFromSlug(t))).map((t) => t.name);
 }
 
-function withTags(tags: Tag[], map: Map<string, string>): Tag[] {
-  return tags.map((t) => ({ ...t, name: pick(map, t.name) }));
+/** English display name for a tag written in another script: taken from its English web address (scutch-grass -> "Scutch grass"), which the admin controls. */
+function englishNameFromSlug(tag: Tag): string | null {
+  if (isPlaceholderSlug(tag.slug) || !/^[a-z0-9-]+$/.test(tag.slug)) return null;
+  const words = tag.slug.replace(/-+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
+}
+
+function withTags(tags: Tag[], map: Map<string, string>, lang: string): Tag[] {
+  return tags.map((t) => {
+    if (lang === "en" && langOf(t.name) !== "en") {
+      const fromSlug = englishNameFromSlug(t);
+      if (fromSlug) return { ...t, name: fromSlug };
+    }
+    return { ...t, name: pick(map, t.name) };
+  });
 }
 
 export async function localizeTags(lang: string, tags: Tag[]): Promise<Tag[]> {
-  const map = await translateMany(lang, tagTexts(tags));
-  return withTags(tags, map);
+  const map = await translateMany(lang, tagTexts(tags, lang));
+  return withTags(tags, map, lang);
 }
 
 export async function localizePosts(lang: string, posts: PostWithTags[]): Promise<PostWithTags[]> {
   const map = await translateMany(
     lang,
-    posts.flatMap((p) => [p.title, p.description, ...tagTexts(p.tags)]),
+    posts.flatMap((p) => [p.title, p.description, ...tagTexts(p.tags, lang)]),
   );
-  return posts.map((p) => ({ ...p, title: pick(map, p.title), description: pick(map, p.description), tags: withTags(p.tags, map) }));
+  return posts.map((p) => ({ ...p, title: pick(map, p.title), description: pick(map, p.description), tags: withTags(p.tags, map, lang) }));
 }
 
 /** Full post including its body (only used on the post page). */
@@ -198,14 +263,14 @@ export async function localizePost(lang: string, post: PostWithTags): Promise<Po
   const lines = splitLines(post.content).map((l) => l.body);
   const noteLines = post.poem_note.split("\n");
   // The poem and the poet's name are NOT translated; only the explanation of the poem is.
-  const map = await translateMany(lang, [post.title, post.description, ...tagTexts(post.tags), ...lines, ...noteLines]);
+  const map = await translateMany(lang, [post.title, post.description, ...tagTexts(post.tags, lang), ...lines, ...noteLines]);
   return {
     ...post,
     title: pick(map, post.title),
     description: pick(map, post.description),
     content: await translateMarkdown(lang, post.content, map),
     poem_note: noteLines.map((l) => pick(map, l)).join("\n"),
-    tags: withTags(post.tags, map),
+    tags: withTags(post.tags, map, lang),
   };
 }
 
