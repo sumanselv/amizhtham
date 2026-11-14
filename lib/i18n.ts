@@ -196,12 +196,15 @@ export async function localizePosts(lang: string, posts: PostWithTags[]): Promis
 /** Full post including its body (only used on the post page). */
 export async function localizePost(lang: string, post: PostWithTags): Promise<PostWithTags> {
   const lines = splitLines(post.content).map((l) => l.body);
-  const map = await translateMany(lang, [post.title, post.description, ...tagTexts(post.tags), ...lines]);
+  const noteLines = post.poem_note.split("\n");
+  // The poem and the poet's name are NOT translated; only the explanation of the poem is.
+  const map = await translateMany(lang, [post.title, post.description, ...tagTexts(post.tags), ...lines, ...noteLines]);
   return {
     ...post,
     title: pick(map, post.title),
     description: pick(map, post.description),
     content: await translateMarkdown(lang, post.content, map),
+    poem_note: noteLines.map((l) => pick(map, l)).join("\n"),
     tags: withTags(post.tags, map),
   };
 }

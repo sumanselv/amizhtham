@@ -90,18 +90,33 @@ export default async function RemedyPage({ params }: Props) {
 
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      {post.poem && (
-        // Original verse: kept exactly as written (never machine-translated, and browsers are told not to translate it either).
-        <figure translate="no" className="notranslate mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
-          <blockquote lang={langOf(post.poem)} className="whitespace-pre-line text-lg italic leading-8 text-[var(--ink)] sm:text-xl sm:leading-9">
-            {post.poem}
-          </blockquote>
-          {post.poet && (
-            <figcaption lang={langOf(post.poet)} className="mt-3 text-sm font-semibold not-italic text-[var(--brand-dark)]">
-              — {post.poet}
-            </figcaption>
+      {(post.poem || post.poet || post.poet_image || post.poem_note) && (
+        <section className="mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
+          {post.poem && (
+            // Original verse: kept exactly as written (never machine-translated; browsers are told not to translate it either).
+            <blockquote translate="no" lang={langOf(post.poem)} className="notranslate whitespace-pre-line text-lg italic leading-8 text-[var(--ink)] sm:text-xl sm:leading-9">
+              {post.poem}
+            </blockquote>
           )}
-        </figure>
+          {(post.poet || post.poet_image) && (
+            <div translate="no" className="notranslate mt-4 flex items-center gap-3">
+              {post.poet_image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverUrl(post.poet_image)!} alt={post.poet || ""} className="h-16 w-16 shrink-0 rounded-full border border-white object-cover shadow-sm sm:h-20 sm:w-20" />
+              )}
+              {post.poet && (
+                <p lang={langOf(post.poet)} className="font-semibold text-[var(--brand-dark)]">
+                  {post.poet}
+                </p>
+              )}
+            </div>
+          )}
+          {post.poem_note && (
+            <p lang={langOf(post.poem_note)} className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--ink)]">
+              {post.poem_note}
+            </p>
+          )}
+        </section>
       )}
 
       {related.length > 0 && (

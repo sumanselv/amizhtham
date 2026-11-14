@@ -2,7 +2,7 @@ import { savePostAction } from "@/app/admin/actions";
 import { coverUrl } from "@/components/PostCard";
 import type { PostWithTags } from "@/lib/db";
 import { imagesEnabled } from "@/lib/env";
-import { tagSlugFor } from "@/lib/db";
+import { isPlaceholderSlug, tagSlugFor } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 
 const NOTICES: Record<string, string> = {
@@ -17,7 +17,7 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
   // Prefill the category when all of this post's tags share one (other than the default "tag").
   const sections = [...new Set(post?.tags.map((t) => t.section) ?? [])];
   const categoryDefault = sections.length === 1 && sections[0] !== "tag" ? sections[0] : "";
-  const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
+  const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -55,8 +55,8 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         </label>
         <input id="tags" name="tags" list="tag-list" defaultValue={tagDefault} className="field" placeholder="நெல்லிக்காய் | amla, தேன் | honey" />
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Tags can be in any language. The web address uses the English name: common names such as நெல்லிக்காய் become <code>/tag/amla</code> on their own.
-          For any other tag add the English name after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can fix addresses later in Admin &gt; Tags.
+          Just type the tag name in any language. The web address is made from its English meaning automatically, e.g. நெல்லிக்காய் becomes <code>/tag/amla</code>.
+          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can change addresses later in Admin &gt; Tags.
         </p>
         <datalist id="tag-list">
           {tagSuggestions.map((t) => (
@@ -106,16 +106,39 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
       <div className="rounded-xl border border-[var(--line)] bg-slate-50 p-4">
         <p className="text-sm font-semibold">Poem section <span className="font-normal text-[var(--muted)]">(optional)</span></p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          An original verse. It is shown in slanted type on the post and is <strong>never translated</strong>, in any language.
+          An original verse, shown in slanted type and <strong>never translated</strong>. After it come the poet&apos;s image and name, then your explanation.
         </p>
         <label htmlFor="poem" className="mb-1 mt-3 block text-sm font-semibold">
           Poem
         </label>
         <textarea id="poem" name="poem" rows={5} maxLength={3000} defaultValue={post?.poem} className="field italic" placeholder="One line per row, as it should appear" />
         <label htmlFor="poet" className="mb-1 mt-3 block text-sm font-semibold">
-          Poet
+          Poet / author name <span className="font-normal text-[var(--muted)]">(never translated)</span>
         </label>
         <input id="poet" name="poet" maxLength={100} defaultValue={post?.poet} className="field" placeholder="Poet's name" />
+
+        <label htmlFor="poet_image" className="mb-1 mt-3 block text-sm font-semibold">
+          Poet image <span className="font-normal text-[var(--muted)]">(optional, shown after the poem)</span>
+        </label>
+        {post?.poet_image && (
+          <div className="mb-3 flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={coverUrl(post.poet_image)!} alt="Current poet image" className="h-20 w-20 rounded-full border border-[var(--line)] object-cover" />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="remove_poet_image" /> Remove this image
+            </label>
+          </div>
+        )}
+        {imagesEnabled() ? (
+          <input id="poet_image" name="poet_image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" className="block w-full text-sm" />
+        ) : (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Image upload is off until R2 is enabled on the Cloudflare account (see README).</p>
+        )}
+
+        <label htmlFor="poem_note" className="mb-1 mt-3 block text-sm font-semibold">
+          Explanation <span className="font-normal text-[var(--muted)]">(meaning of the poem; this part IS translated for other languages)</span>
+        </label>
+        <textarea id="poem_note" name="poem_note" rows={4} maxLength={3000} defaultValue={post?.poem_note} className="field" placeholder="What the poem means, in simple words" />
       </div>
 
       <div>

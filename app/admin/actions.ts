@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, deleteMessage, deletePost, getPostById, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
+import { createPost, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { cleanSection, parseTagInput, slugify } from "@/lib/slug";
+import { translateMany } from "@/lib/i18n";
+import { cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -63,6 +64,26 @@ async function removeImageIfUnused(key: string | null, exceptPostId?: number): P
 
 /* ------------------------------ posts ------------------------------ */
 
+/** Tags written in another language get an English web address from their English meaning (e.g. அறுகம்புல் -> /plant/scutch-grass), not a random code. */
+async function withEnglishAddresses(tags: TagInput[]): Promise<TagInput[]> {
+  const out: TagInput[] = [];
+  for (const t of tags) {
+    if (t.slug || tagSlugFor(t.name)) {
+      out.push(t); // typed by the admin, or already known
+      continue;
+    }
+    const existing = await getTagByName(t.name);
+    if (existing && !isPlaceholderSlug(existing.slug)) {
+      out.push(t); // reuse the existing tag and its address
+      continue;
+    }
+    const english = (await translateMany("en", [t.name])).get(t.name);
+    const slug = english ? slugify(english) : "";
+    out.push(slug && !(await getTagBySlug(slug)) ? { name: t.name, slug } : t);
+  }
+  return out;
+}
+
 export async function savePostAction(formData: FormData): Promise<void> {
   await requireAdmin();
 
@@ -78,7 +99,8 @@ export async function savePostAction(formData: FormData): Promise<void> {
   // Three buttons: "save" keeps the current state (a new post stays a draft), "publish" shows it on the site, "unpublish" hides it again.
   const rawIntent = String(formData.get("intent") ?? "save");
   const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
-  const tags = parseTagInput(String(formData.get("tags") ?? ""));
+  const tags = await withEnglishAddresses(parseTagInput(String(formData.get("tags") ?? "")));
+  const poemNote = String(formData.get("poem_note") ?? "").replace(/\r\n?/g, "\n").trim();
   const poem = String(formData.get("poem") ?? "").replace(/\r\n?/g, "\n").trim();
   const poet = String(formData.get("poet") ?? "").trim();
   // Category: empty keeps tag addresses as /tag/name; "fruit" makes them /fruit/name.
@@ -95,6 +117,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
   if (title.length > 150) redirect(`${backTo}?error=${encodeURIComponent("Title is too long (max 150 characters).")}`);
   if (description.length > 300) redirect(`${backTo}?error=${encodeURIComponent("Description is too long (max 300 characters).")}`);
   if (poem.length > 3000) redirect(`${backTo}?error=${encodeURIComponent("Poem is too long (max 3000 characters).")}`);
+  if (poemNote.length > 3000) redirect(`${backTo}?error=${encodeURIComponent("Poem explanation is too long (max 3000 characters).")}`);
   if (poet.length > 100) redirect(`${backTo}?error=${encodeURIComponent("Poet name is too long (max 100 characters).")}`);
   if (content.length > 100_000) redirect(`${backTo}?error=${encodeURIComponent("Post body is too long.")}`);
 
@@ -114,13 +137,26 @@ export async function savePostAction(formData: FormData): Promise<void> {
     cover = null;
   }
 
+  // Poet image: same rules as the cover image.
+  let poetImage = existing?.poet_image ?? null;
+  let replacedPoetImage: string | null = null;
+  const poetUpload = formData.get("poet_image");
+  if (poetUpload instanceof File && poetUpload.size > 0) {
+    replacedPoetImage = poetImage;
+    poetImage = await storeImage(poetUpload, backTo);
+  } else if (formData.get("remove_poet_image") === "on") {
+    replacedPoetImage = poetImage;
+    poetImage = null;
+  }
+
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, category, poem, poet };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, category, poem, poet, poet_image: poetImage, poem_note: poemNote };
 
   let postId = id;
   if (id) {
     await updatePost(id, input);
     if (replacedCover && replacedCover !== cover) await removeImageIfUnused(replacedCover, id);
+    if (replacedPoetImage && replacedPoetImage !== poetImage) await removeImageIfUnused(replacedPoetImage, id);
   } else {
     postId = await createPost(input);
   }
@@ -135,8 +171,7 @@ export async function deletePostAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) redirect("/admin");
-  const cover = await deletePost(id);
-  await removeImageIfUnused(cover);
+  for (const key of await deletePost(id)) await removeImageIfUnused(key);
   redirect("/admin?deleted=1");
 }
 
