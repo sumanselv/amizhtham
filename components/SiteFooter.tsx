@@ -7,7 +7,7 @@ export default async function SiteFooter() {
   const ui = await getUi(lang);
   return (
     <footer className="mt-16 border-t border-[var(--line)] bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-8 text-sm sm:px-6 text-[var(--muted)]">
+      <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-slate-700 sm:px-6">
         <p lang={lang} className="max-w-3xl">
           {ui.disclaimerFooter}
         </p>
