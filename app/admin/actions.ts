@@ -75,7 +75,9 @@ export async function savePostAction(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim();
   const content = String(formData.get("content") ?? "");
   const slug = String(formData.get("slug") ?? "").trim();
-  const published = formData.get("published") === "on";
+  // Three buttons: "save" keeps the current state (a new post stays a draft), "publish" shows it on the site, "unpublish" hides it again.
+  const rawIntent = String(formData.get("intent") ?? "save");
+  const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
   const tags = parseTagInput(String(formData.get("tags") ?? ""));
 
   if (!title) redirect(`${backTo}?error=${encodeURIComponent("Title is required.")}`);
@@ -99,16 +101,21 @@ export async function savePostAction(formData: FormData): Promise<void> {
     cover = null;
   }
 
+  const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
   const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags };
 
+  let postId = id;
   if (id) {
     await updatePost(id, input);
     if (replacedCover && replacedCover !== cover) await removeImageIfUnused(replacedCover, id);
   } else {
-    await createPost(input);
+    postId = await createPost(input);
   }
 
-  redirect("/admin?saved=1");
+  if (intent === "publish") redirect("/admin?saved=published");
+  if (intent === "unpublish") redirect(`/admin/edit/${postId}?notice=unpublished`);
+  // Plain save: stay on the post so the admin can keep editing.
+  redirect(`/admin/edit/${postId}?notice=${published ? "saved-live" : "saved"}`);
 }
 
 export async function deletePostAction(formData: FormData): Promise<void> {

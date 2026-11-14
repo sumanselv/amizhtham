@@ -24,7 +24,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </Link>
         </div>
 
-        {sp.saved && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">Post saved.</p>}
+        {sp.saved && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">{sp.saved === "published" ? "Post published. It is now visible on the site." : "Post saved."}</p>}
         {sp.deleted && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">Post deleted.</p>}
 
         <div className="mt-6 overflow-hidden rounded-xl border border-[var(--line)] bg-white">

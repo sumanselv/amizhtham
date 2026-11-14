@@ -5,12 +5,25 @@ import { imagesEnabled } from "@/lib/env";
 import { tagSlugFor } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 
-export default function PostForm({ post, error, tagSuggestions }: { post?: PostWithTags; error?: string; tagSuggestions: string[] }) {
+const NOTICES: Record<string, string> = {
+  saved: "Saved. This post is a draft: it is stored in the database but NOT shown on the site until you click Publish.",
+  "saved-live": "Changes saved. The post is live on the site.",
+  unpublished: "Unpublished. The post is saved as a draft and is no longer shown on the site.",
+};
+
+export default function PostForm({ post, error, notice, tagSuggestions }: { post?: PostWithTags; error?: string; notice?: string; tagSuggestions: string[] }) {
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
+  const live = post?.published === 1;
   const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
+
+      {notice && NOTICES[notice] && (
+        <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {NOTICES[notice]}
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -87,15 +100,29 @@ export default function PostForm({ post, error, tagSuggestions }: { post?: PostW
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm font-medium">
-        <input type="checkbox" name="published" defaultChecked={post ? post.published === 1 : true} />
-        Published (untick to keep it as a draft that only you can see)
-      </label>
+      <p className="text-sm">
+        Status:{" "}
+        {live ? (
+          <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800">Published (visible on the site)</span>
+        ) : (
+          <span className="rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700">Draft (not visible on the site)</span>
+        )}
+      </p>
 
-      <div className="flex gap-3">
-        <button type="submit" className="btn btn-primary">
-          {post ? "Save changes" : "Publish post"}
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" name="intent" value="save" className="btn btn-ghost border border-[var(--line)]">
+          {live ? "Save changes" : "Save draft"}
         </button>
+        {!live && (
+          <button type="submit" name="intent" value="publish" className="btn btn-primary">
+            Publish
+          </button>
+        )}
+        {live && (
+          <button type="submit" name="intent" value="unpublish" className="btn btn-ghost">
+            Unpublish
+          </button>
+        )}
         <a href="/admin" className="btn btn-ghost">
           Cancel
         </a>

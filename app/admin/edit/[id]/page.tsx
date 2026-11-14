@@ -11,11 +11,11 @@ export default async function EditPostPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, notice } = await searchParams;
   const postId = Number(id);
   if (!Number.isInteger(postId)) notFound();
 
@@ -28,7 +28,7 @@ export default async function EditPostPage({
       <main className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         <h1 className="mb-6 text-2xl font-bold">Edit post</h1>
         <div className="rounded-xl border border-[var(--line)] bg-white p-6">
-          <PostForm post={post} error={error} tagSuggestions={tagSuggestions} />
+          <PostForm post={post} error={error} notice={notice} tagSuggestions={tagSuggestions} />
         </div>
       </main>
     </>
