@@ -49,7 +49,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {q ? ui.noResults : ui.noPosts}
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} locale={locale} />
           ))}

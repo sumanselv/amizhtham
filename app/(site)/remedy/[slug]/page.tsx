@@ -119,7 +119,7 @@ export default async function RemedyPage({ params }: Props) {
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
           <h2 lang={lang} className="mb-4 text-xl font-bold">{ui.related}</h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {related.map((p) => (
               <PostCard key={p.id} post={p} locale={locale} />
             ))}

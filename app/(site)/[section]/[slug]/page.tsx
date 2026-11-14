@@ -62,7 +62,7 @@ export default async function TagPage({ params, searchParams }: Props) {
           {ui.noTagPosts}
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 items-start gap-5 sm:mt-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} locale={locale} />
           ))}
