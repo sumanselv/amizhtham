@@ -21,7 +21,7 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
 
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
+      <div className="aspect-[2/1] w-full overflow-hidden bg-slate-100">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={cover} alt={post.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-[1.03]" />
@@ -47,13 +47,16 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
           ))}
         </ul>
 
-        <h2 lang={langOf(post.title)} className="line-clamp-2 h-[3.25rem] text-lg font-bold leading-snug text-[var(--ink)]">
-          <Link href={`/remedy/${encodeURIComponent(post.slug)}`} className="after:absolute after:inset-0 after:content-['']">
-            {post.title}
-          </Link>
-        </h2>
+        {/* Fixed-height text block: title and description sit close together, and every card stays the same size. */}
+        <div className="flex h-[8.5rem] flex-col gap-1.5 overflow-hidden">
+          <h2 lang={langOf(post.title)} className="line-clamp-2 shrink-0 text-lg font-bold leading-snug text-[var(--ink)]">
+            <Link href={`/remedy/${encodeURIComponent(post.slug)}`} className="after:absolute after:inset-0 after:content-['']">
+              {post.title}
+            </Link>
+          </h2>
 
-        <p lang={langOf(post.description)} className="line-clamp-3 h-[4.5rem] text-sm leading-6 text-slate-700">{post.description}</p>
+          <p lang={langOf(post.description)} className="line-clamp-3 text-sm leading-6 text-slate-700">{post.description}</p>
+        </div>
 
         <p className="mt-auto pt-1 text-xs text-slate-600">{formatDate(post.created_at, locale)}</p>
       </div>
