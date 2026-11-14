@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "./db";
 import { getEnv } from "./env";
@@ -38,24 +38,7 @@ export function languageOf(code: string): Language {
   return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0];
 }
 
-/** Best supported language from an Accept-Language header (the phone's / browser's language list). */
-export function pickLang(accept: string | null | undefined): string {
-  if (!accept) return SOURCE_LANG;
-  const ranked = accept
-    .split(",")
-    .map((part, i) => {
-      const [tag, ...params] = part.trim().split(";");
-      const q = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
-      return { code: tag.trim().toLowerCase().split("-")[0], q: q ? Number(q.slice(2)) : 1, i };
-    })
-    .filter((x) => x.code && x.code !== "*" && !Number.isNaN(x.q) && x.q > 0)
-    .sort((a, b) => b.q - a.q || a.i - b.i);
-  for (const r of ranked) if (isLang(r.code)) return r.code;
-  // The visitor's languages are none of ours: English is the safest common language.
-  return ranked.length > 0 ? "en" : SOURCE_LANG;
-}
-
-/** The visitor's language: their saved choice first, then the browser / phone language. */
+/** The visitor's language: their saved choice (language menu), otherwise Tamil, the site's primary language. */
 export const getLang = cache(async (): Promise<string> => {
   try {
     const saved = (await cookies()).get(LANG_COOKIE)?.value;
@@ -63,11 +46,7 @@ export const getLang = cache(async (): Promise<string> => {
   } catch {
     /* no cookies available (e.g. during a static build) */
   }
-  try {
-    return pickLang((await headers()).get("accept-language"));
-  } catch {
-    return SOURCE_LANG;
-  }
+  return SOURCE_LANG;
 });
 
 /* ------------------------------ translation ------------------------------ */

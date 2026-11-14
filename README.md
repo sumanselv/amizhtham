@@ -97,8 +97,8 @@ Remedy posts should stay general ("traditionally used", "many people enjoy") and
 
 ## Languages (automatic)
 
-The site opens in the visitor's own language: a saved choice first, otherwise the phone / browser language
-(`Accept-Language`). Supported: Tamil, English, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati.
+The site always opens in Tamil (the primary language). Visitors can switch with the 🌐 menu and the choice is
+remembered in a cookie. Supported: Tamil, English, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, Gujarati.
 
 - Posts are written once (Tamil is the source). Titles, descriptions, bodies and tag names are translated on
   demand with Workers AI (`AI` binding, model `@cf/meta/m2m100-1.2b`) and cached forever in the D1 `translations`
