@@ -82,15 +82,10 @@ export default async function RemedyPage({ params }: Props) {
         </div>
       )}
 
-      {post.description && (
-        <p lang={langOf(post.description)} className="mt-5 text-base leading-7 text-[var(--muted)] sm:mt-6 sm:text-lg sm:leading-8">
-          {post.description}
-        </p>
-      )}
-
       <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
-      {(post.poem || post.poet || post.poet_image || post.poem_note) && (
+      {(post.poem || post.poet || post.poet_image) && (
+        // Only the poem (and its poet) is highlighted.
         <section className="mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
           {post.poem && (
             // Original verse: kept exactly as written (never machine-translated; browsers are told not to translate it either).
@@ -99,7 +94,7 @@ export default async function RemedyPage({ params }: Props) {
             </blockquote>
           )}
           {(post.poet || post.poet_image) && (
-            <div translate="no" className="notranslate mt-4 flex items-center gap-3">
+            <div translate="no" className={`notranslate flex items-center gap-3 ${post.poem ? "mt-4" : ""}`}>
               {post.poet_image && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={coverUrl(post.poet_image)!} alt={post.poet || ""} className="h-16 w-16 shrink-0 rounded-full border border-white object-cover shadow-sm sm:h-20 sm:w-20" />
@@ -111,12 +106,14 @@ export default async function RemedyPage({ params }: Props) {
               )}
             </div>
           )}
-          {post.poem_note && (
-            <p lang={langOf(post.poem_note)} className="mt-4 whitespace-pre-line text-base leading-7 text-[var(--ink)]">
-              {post.poem_note}
-            </p>
-          )}
         </section>
+      )}
+
+      {post.poem_note && (
+        // The explanation is ordinary text (and is translated for other languages).
+        <p lang={langOf(post.poem_note)} className="mt-5 whitespace-pre-line text-base leading-7 text-[var(--ink)] sm:mt-6">
+          {post.poem_note}
+        </p>
       )}
 
       {related.length > 0 && (
