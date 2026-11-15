@@ -110,6 +110,10 @@ async function init(): Promise<D1Like> {
   if (!cols.results.some((c) => c.name === "section")) {
     await d1.prepare("ALTER TABLE tags ADD COLUMN section TEXT NOT NULL DEFAULT 'tag'").run();
   }
+  // Tags added by hand in the admin (no post needed) are marked "kept" so they are not cleaned up.
+  if (!cols.results.some((c) => c.name === "kept")) {
+    await d1.prepare("ALTER TABLE tags ADD COLUMN kept INTEGER NOT NULL DEFAULT 0").run();
+  }
   const seeded = await d1.prepare("SELECT value FROM meta WHERE key = 'seeded'").first();
   if (!seeded) {
     await d1.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('seeded', '1')").run();
@@ -242,6 +246,21 @@ export async function updateTag(id: number, name: string, slug: string, section 
   return "ok";
 }
 
+/** Add a tag by itself (no post). It stays until the admin deletes it. Returns "exists" if the name or address is already used. */
+export async function createTag(name: string, slug: string, section: string): Promise<"ok" | "exists"> {
+  const d1 = await db();
+  const clash = await d1.prepare("SELECT id FROM tags WHERE slug = ? OR name = ?").bind(slug, name).first();
+  if (clash) return "exists";
+  await d1.prepare("INSERT INTO tags (name, slug, section, kept) VALUES (?, ?, ?, 1)").bind(name, slug, section).run();
+  return "ok";
+}
+
+/** Delete a tag that no post uses. */
+export async function deleteUnusedTag(id: number): Promise<void> {
+  const d1 = await db();
+  await d1.prepare("DELETE FROM tags WHERE id = ? AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").bind(id).run();
+}
+
 export async function listAllTagNames(): Promise<string[]> {
   const d1 = await db();
   const rows = await d1.prepare("SELECT name FROM tags ORDER BY name").all<{ name: string }>();
@@ -342,7 +361,7 @@ async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], categor
     }
   }
   // Remove tags nobody uses any more so the tag directory stays clean.
-  await d1.prepare("DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").run();
+  await d1.prepare("DELETE FROM tags WHERE kept = 0 AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").run();
 }
 
 export interface PostInput {
@@ -397,7 +416,7 @@ export async function deletePost(id: number): Promise<string[]> {
   const row = await d1.prepare("SELECT cover_image, poet_image FROM posts WHERE id = ?").bind(id).first<{ cover_image: string | null; poet_image: string | null }>();
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(id).run();
   await d1.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
-  await d1.prepare("DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").run();
+  await d1.prepare("DELETE FROM tags WHERE kept = 0 AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").run();
   return [row?.cover_image, row?.poet_image].filter((k): k is string => !!k);
 }
 

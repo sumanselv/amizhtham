@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
+import { createPost, createTag, deleteUnusedTag, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { translateMany, warmPost } from "@/lib/i18n";
-import { AUTHOR_SECTION, BOOK_SECTION, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
+import { AUTHOR_SECTION, BOOK_SECTION, randomCode, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -193,6 +193,28 @@ export async function deletePostAction(formData: FormData): Promise<void> {
 
 /* ------------------------------ tags ------------------------------ */
 
+/** Add a tag by itself, without a post. */
+export async function addTagAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+  const rawSlug = String(formData.get("slug") ?? "").trim();
+  const rawSection = String(formData.get("section") ?? "").trim();
+  const fail = (msg: string): never => redirect(`/admin/tags?error=${encodeURIComponent(msg)}`);
+
+  if (!name) fail("Type a tag name.");
+  if (rawSlug && !slugify(rawSlug)) fail("The English address must use English letters or numbers, e.g. amla.");
+  const section = cleanSection(rawSection);
+  if (section === null) fail(`"${rawSection}" is used by the site itself. Choose another section name.`);
+
+  // English address: typed, taken from the name, or translated from its meaning.
+  const [input] = await withEnglishAddresses([rawSlug ? { name, slug: slugify(rawSlug) } : { name }]);
+  const slug = input.slug || tagSlugFor(name) || `tag-${randomCode()}`;
+
+  const result = await createTag(name, slug, section as string);
+  if (result === "exists") fail(`A tag named "${name}" or with the address "${slug}" already exists.`);
+  redirect(`/admin/tags?added=${encodeURIComponent(name)}`);
+}
+
 /** Save tag names (any language) and their English web addresses. */
 export async function saveTagNamesAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -200,6 +222,10 @@ export async function saveTagNamesAction(formData: FormData): Promise<void> {
   const taken: string[] = [];
   const reserved: string[] = [];
   for (const tag of tags) {
+    if (formData.get(`del_${tag.id}`) === "on" && !tag.post_count) {
+      await deleteUnusedTag(tag.id);
+      continue;
+    }
     const rawName = formData.get(`tag_${tag.id}`);
     const rawSlug = formData.get(`slug_${tag.id}`);
     if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
