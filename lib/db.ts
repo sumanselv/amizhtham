@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getEnv, type D1Like } from "./env";
 import { randomCode, slugify, type TagInput } from "./slug";
 import { englishNameFor } from "./tagnames";
@@ -86,8 +87,17 @@ export function db(): Promise<D1Like> {
   return ready;
 }
 
+/** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
+const SCHEMA_VERSION = "5";
+
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
+  try {
+    const row = await d1.prepare("SELECT value FROM meta WHERE key = 'schema_v'").first<{ value: string }>();
+    if (row?.value === SCHEMA_VERSION) return d1;
+  } catch {
+    /* no meta table yet: first run */
+  }
   await d1.batch(SCHEMA.map((sql) => d1.prepare(sql)));
   // Machine translations made by the first (poor) model are discarded once.
   const cleaned = await d1.prepare("SELECT value FROM meta WHERE key = 'translations_v2'").first();
@@ -120,12 +130,23 @@ async function init(): Promise<D1Like> {
     const { n } = (await d1.prepare("SELECT COUNT(*) AS n FROM posts").first<{ n: number }>()) ?? { n: 0 };
     if (n === 0) await seedSamples(d1);
   }
+  await d1.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_v', ?)").bind(SCHEMA_VERSION).run();
   return d1;
 }
 
 /* ------------------------------ reading ------------------------------ */
 
+/** Columns a post card needs. The long text (body, poem, explanation) is only loaded for the post page. */
+const CARD_COLS = "p.id, p.title, p.slug, p.description, p.cover_image, p.published, p.created_at, p.updated_at";
+
+type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at">;
+
+function fullPost(r: CardRow | Post): Post {
+  return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", ...r };
+}
+
 export async function listPosts(opts: {
+  withContent?: boolean;
   tagSlug?: string;
   q?: string;
   includeDrafts?: boolean;
@@ -155,16 +176,19 @@ export async function listPosts(opts: {
   }
 
   const base = `FROM posts p ${joins.join(" ")} ${where.length ? "WHERE " + where.join(" AND ") : ""}`;
-  const totalRow = await d1
-    .prepare(`SELECT COUNT(DISTINCT p.id) AS n ${base}`)
-    .bind(...params)
-    .first<{ n: number }>();
-  const rows = await d1
-    .prepare(`SELECT DISTINCT p.* ${base} ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`)
-    .bind(...params, pageSize, (page - 1) * pageSize)
-    .all<Post>();
+  // Count and page of posts are asked at the same time.
+  const [totalRow, rows] = await Promise.all([
+    d1
+      .prepare(`SELECT COUNT(DISTINCT p.id) AS n ${base}`)
+      .bind(...params)
+      .first<{ n: number }>(),
+    d1
+      .prepare(`SELECT DISTINCT ${opts.withContent ? "p.*" : CARD_COLS} ${base} ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`)
+      .bind(...params, pageSize, (page - 1) * pageSize)
+      .all<CardRow>(),
+  ]);
 
-  return { posts: await attachTags(d1, rows.results), total: totalRow?.n ?? 0 };
+  return { posts: await attachTags(d1, rows.results.map(fullPost)), total: totalRow?.n ?? 0 };
 }
 
 async function attachTags(d1: D1Like, posts: Post[]): Promise<PostWithTags[]> {
@@ -188,7 +212,7 @@ async function attachTags(d1: D1Like, posts: Post[]): Promise<PostWithTags[]> {
   return posts.map((p) => ({ ...p, tags: byPost.get(p.id) ?? [] }));
 }
 
-export async function getPostBySlug(slug: string, includeDrafts = false): Promise<PostWithTags | null> {
+export const getPostBySlug = cache(async (slug: string, includeDrafts = false): Promise<PostWithTags | null> => {
   const d1 = await db();
   const row = await d1
     .prepare(`SELECT * FROM posts WHERE slug = ? ${includeDrafts ? "" : "AND published = 1"}`)
@@ -196,7 +220,7 @@ export async function getPostBySlug(slug: string, includeDrafts = false): Promis
     .first<Post>();
   if (!row) return null;
   return (await attachTags(d1, [row]))[0];
-}
+});
 
 export async function getPostById(id: number): Promise<PostWithTags | null> {
   const d1 = await db();
@@ -205,13 +229,13 @@ export async function getPostById(id: number): Promise<PostWithTags | null> {
   return (await attachTags(d1, [row]))[0];
 }
 
-export async function getTagBySlug(slug: string): Promise<Tag | null> {
+export const getTagBySlug = cache(async (slug: string): Promise<Tag | null> => {
   const d1 = await db();
   return d1.prepare("SELECT id, name, slug, section FROM tags WHERE slug = ?").bind(slug).first<Tag>();
-}
+});
 
 /** All tags that have at least one published post, with counts. */
-export async function listTags(): Promise<Tag[]> {
+export const listTags = cache(async (): Promise<Tag[]> => {
   const d1 = await db();
   const rows = await d1
     .prepare(
@@ -223,7 +247,7 @@ export async function listTags(): Promise<Tag[]> {
     )
     .all<Tag>();
   return rows.results;
-}
+});
 
 /** Every tag (including ones only used by drafts) for the admin rename page. */
 export async function listAllTags(): Promise<Tag[]> {
@@ -274,14 +298,14 @@ export async function listRelatedPosts(post: PostWithTags, limit = 3): Promise<P
   const marks = tagIds.map(() => "?").join(",");
   const rows = await d1
     .prepare(
-      `SELECT p.*, COUNT(*) AS shared FROM posts p
+      `SELECT ${CARD_COLS}, COUNT(*) AS shared FROM posts p
        JOIN post_tags pt ON pt.post_id = p.id
        WHERE pt.tag_id IN (${marks}) AND p.id != ? AND p.published = 1
        GROUP BY p.id ORDER BY shared DESC, p.created_at DESC LIMIT ?`,
     )
     .bind(...tagIds, post.id, limit)
-    .all<Post>();
-  return attachTags(d1, rows.results);
+    .all<CardRow>();
+  return attachTags(d1, rows.results.map(fullPost));
 }
 
 export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; updated_at: string }[]; tags: { section: string; slug: string }[] }> {

@@ -5,7 +5,7 @@ import { warmPost } from "@/lib/i18n";
 /** Admin only: /admin/warm translates every published post into English (a bit at a time). Open it again until it says "all done". */
 export async function GET() {
   await requireAdmin();
-  const { posts } = await listPosts({ pageSize: 200 });
+  const { posts } = await listPosts({ pageSize: 200, withContent: true });
   let remaining = 0;
   const lines: string[] = [];
   const started = Date.now();
