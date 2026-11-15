@@ -32,23 +32,22 @@ export default async function AdminTagsPage({ searchParams }: { searchParams: Pr
 
         <form action={addTagAction} className="mt-6 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
           <h2 className="text-base font-bold">Add a tag</h2>
-          <p className="mt-1 text-xs text-[var(--muted)]">Create a tag on its own, without a post. Choose its <b>type</b> to group it, e.g. <code>plant</code> for <code>/plant/scutch-grass</code> or <code>causes</code> for <code>/causes/cough</code>. Tag posts later by typing its name in a post.</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">Create a tag on its own, without a post. Choose its <b>type</b>: <b>Herb</b> gives <code>/plant/scutch-grass</code>, <b>Causes</b> gives <code>/causes/cough</code>, <b>Tag</b> gives <code>/tag/name</code>. Tag posts later by typing its name in a post.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <input name="name" required maxLength={40} aria-label="Tag name (any language)" placeholder="நெல்லிக்காய்" className="field sm:flex-1" />
             <div className="flex items-center gap-1 sm:w-72">
               <span className="text-sm text-[var(--muted)]">/</span>
-              <input name="section" list="tag-types" maxLength={30} aria-label="Tag type (address section)" placeholder="type" className="field w-28 shrink-0" />
+              <select name="section" aria-label="Tag type" defaultValue="tag" className="field w-28 shrink-0">
+                <option value="tag">Tag</option>
+                <option value="plant">Herb</option>
+                <option value="causes">Causes</option>
+              </select>
               <span className="text-sm text-[var(--muted)]">/</span>
               <input name="slug" maxLength={80} aria-label="English address" placeholder="amla" className="field" />
             </div>
             <button type="submit" className="btn btn-primary">Add tag</button>
           </div>
-          <p className="mt-2 text-xs text-[var(--muted)]">Type and English address are optional: an empty type means <code>tag</code>, and an empty address is made from the English meaning of the name.</p>
-          <datalist id="tag-types">
-            {["plant", "causes", ...new Set(tags.map((t) => t.section))].filter((v, i, a) => v !== "tag" && a.indexOf(v) === i).map((v) => (
-              <option key={v} value={v} />
-            ))}
-          </datalist>
+          <p className="mt-2 text-xs text-[var(--muted)]">The English address is optional; an empty address is made from the English meaning of the name.</p>
         </form>
 
         {tags.length === 0 ? (
