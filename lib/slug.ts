@@ -76,7 +76,8 @@ export interface TagInput {
 
 /**
  * Parse "Amla, நெல்லிக்காய் | amla, Honey" into unique tags (max 8).
- * A tag can be written in any language; "name | english-url" sets its English address.
+ * A tag can be written in any language; "name | english-url" sets its English address,
+ * and "name | type/english-url" also sets its type (address section), e.g. "அறுகம்புல் | plant/scutch-grass" or "இருமல் | causes/cough".
  */
 export function parseTagInput(raw: string): TagInput[] {
   const seen = new Set<string>();
@@ -86,8 +87,17 @@ export function parseTagInput(raw: string): TagInput[] {
     const name = (namePart ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
     if (!name || seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
-    const slug = rest.length ? slugify(rest.join("|")) : "";
-    out.push(slug ? { name, slug } : { name });
+    const address = rest.join("|").trim();
+    let slug = "";
+    let section: string | undefined;
+    if (address.includes("/")) {
+      const [typePart, ...slugParts] = address.split("/");
+      if (slugify(typePart)) section = cleanSection(typePart) ?? undefined; // reserved words are ignored
+      slug = slugify(slugParts.join("/"));
+    } else {
+      slug = slugify(address);
+    }
+    out.push({ name, ...(slug ? { slug } : {}), ...(section ? { section } : {}) });
     if (out.length >= 8) break;
   }
   return out;

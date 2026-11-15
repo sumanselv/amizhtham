@@ -18,10 +18,16 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
   const remedyTags = post?.tags.filter((t) => t.section !== AUTHOR_SECTION && t.section !== BOOK_SECTION) ?? [];
   const sections = [...new Set(remedyTags.map((t) => t.section))];
   const categoryDefault = sections.length === 1 && sections[0] !== "tag" ? sections[0] : "";
-  const label = (t: { name: string; slug: string }) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`);
-  const authorsDefault = post?.tags.filter((t) => t.section === AUTHOR_SECTION).map(label).join(", ");
-  const booksDefault = post?.tags.filter((t) => t.section === BOOK_SECTION).map(label).join(", ");
-  const tagDefault = remedyTags.map((t) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`)).join(", ");
+  // "name", "name | english-address" or "name | type/english-address" (type shown when it differs from the common category).
+  const label = (t: { name: string; slug: string; section: string }, showType = false) => {
+    const type = showType && t.section !== "tag" && t.section !== categoryDefault ? `${t.section}/` : "";
+    const plain = tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug);
+    if (plain && !type) return t.name;
+    return `${t.name} | ${type}${plain ? tagSlugFor(t.name) || t.slug : t.slug}`;
+  };
+  const authorsDefault = post?.tags.filter((t) => t.section === AUTHOR_SECTION).map((t) => label(t)).join(", ");
+  const booksDefault = post?.tags.filter((t) => t.section === BOOK_SECTION).map((t) => label(t)).join(", ");
+  const tagDefault = remedyTags.map((t) => label(t, true)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -60,7 +66,9 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         <input id="tags" name="tags" list="tag-list" defaultValue={tagDefault} className="field" placeholder="நெல்லிக்காய் | amla, தேன் | honey" />
         <p className="mt-1 text-xs text-[var(--muted)]">
           Just type the tag name in any language. The web address is made from its English meaning automatically, e.g. நெல்லிக்காய் becomes <code>/tag/amla</code>.
-          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can change addresses later in Admin &gt; Tags.
+          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. To give a tag a <b>type</b>, put it before the name:
+          <code> அறுகம்புல் | plant/scutch-grass</code> makes <code>/plant/scutch-grass</code>, and <code> இருமல் | causes/cough</code> makes <code>/causes/cough</code>.
+          You can change addresses later in Admin &gt; Tags.
         </p>
         <datalist id="tag-list">
           {tagSuggestions.map((t) => (
