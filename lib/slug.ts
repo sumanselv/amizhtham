@@ -37,6 +37,11 @@ export function langOf(text: string): string {
 export const AUTHOR_SECTION = "author";
 export const BOOK_SECTION = "book";
 
+/** Authors and books are not tags: they are shown as "Author" and "Book" lines, never as tag chips or in tag lists. */
+export function isPeopleSection(section: string | undefined): boolean {
+  return section === AUTHOR_SECTION || section === BOOK_SECTION;
+}
+
 /** First address segments that already belong to the site and cannot be used as a tag section. */
 export const RESERVED_SECTIONS = ["en", "og", "admin", "remedy", "tags", "contact", "lang", "img", "icon", "sitemap", "robots", "api", "_next", "static", "assets"];
 

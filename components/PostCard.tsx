@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
-import { formatDate, langOf, tagHref } from "@/lib/slug";
+import { formatDate, isPeopleSection, langOf, tagHref } from "@/lib/slug";
 import { getPrefix, withPrefix } from "@/lib/i18n";
 
 export function coverUrl(key: string | null): string | null {
@@ -10,6 +10,7 @@ export function coverUrl(key: string | null): string | null {
 export default async function PostCard({ post, locale }: { post: PostWithTags; locale?: string }) {
   const cover = coverUrl(post.cover_image);
   const prefix = await getPrefix();
+  const tags = post.tags.filter((t) => !isPeopleSection(t.section)); // authors and books are not tags
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -22,9 +23,9 @@ export default async function PostCard({ post, locale }: { post: PostWithTags; l
       )}
 
       <div className="flex flex-col gap-2.5 p-4 sm:gap-3 sm:p-5">
-        {post.tags.length > 0 && (
+        {tags.length > 0 && (
           <ul className="relative z-10 flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
+            {tags.map((tag) => (
               <li key={tag.id}>
                 <Link
                   href={withPrefix(prefix, tagHref(tag))}

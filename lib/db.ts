@@ -243,6 +243,7 @@ export const listTags = cache(async (): Promise<Tag[]> => {
        FROM tags t
        JOIN post_tags pt ON pt.tag_id = t.id
        JOIN posts p ON p.id = pt.post_id AND p.published = 1
+       WHERE t.section NOT IN ('author', 'book')
        GROUP BY t.id ORDER BY t.name`,
     )
     .all<Tag>();
@@ -332,8 +333,14 @@ export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; up
   const posts = await d1
     .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 ORDER BY created_at DESC")
     .all<{ slug: string; updated_at: string }>();
-  const tags = await listTags();
-  return { posts: posts.results, tags: tags.map((t) => ({ section: t.section, slug: t.slug })) };
+  // Every tag page, including author and book pages (they are not "tags" on the site, but they have pages).
+  const tags = await d1
+    .prepare(
+      `SELECT DISTINCT t.section AS section, t.slug AS slug FROM tags t
+       JOIN post_tags pt ON pt.tag_id = t.id JOIN posts p ON p.id = pt.post_id AND p.published = 1`,
+    )
+    .all<{ section: string; slug: string }>();
+  return { posts: posts.results, tags: tags.results };
 }
 
 /* ------------------------------ writing ------------------------------ */

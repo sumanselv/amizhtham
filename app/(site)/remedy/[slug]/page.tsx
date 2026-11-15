@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
-import { decodeParam, formatDate, langOf, tagHref } from "@/lib/slug";
+import { decodeParam, formatDate, isPeopleSection, langOf, tagHref } from "@/lib/slug";
 import { brandFor } from "@/lib/brand";
 import { getLang, getPrefix, languageOf, localizePost, localizePosts, withPrefix } from "@/lib/i18n";
 import { alternatesFor, pageUrl, shareMeta, absoluteUrl } from "@/lib/seo";
@@ -50,7 +50,11 @@ export default async function RemedyPage({ params }: Props) {
 
   const pLang = lang === "en" ? "en" : "ta";
   const url = pageUrl(pLang, `/remedy/${encodeURIComponent(post.slug)}`);
-  const firstTag = post.tags[0];
+  // Authors and books are shown on their own lines, not as tags.
+  const tags = post.tags.filter((t) => !isPeopleSection(t.section));
+  const authors = post.tags.filter((t) => t.section === "author");
+  const books = post.tags.filter((t) => t.section === "book");
+  const firstTag = tags[0];
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -63,7 +67,7 @@ export default async function RemedyPage({ params }: Props) {
       inLanguage: pLang,
       mainEntityOfPage: url,
       url,
-      keywords: post.tags.map((t) => t.name).join(", ") || undefined,
+      keywords: tags.map((t) => t.name).join(", ") || undefined,
       author: { "@type": "Organization", name: brandFor(lang) },
       publisher: { "@type": "Organization", name: brandFor(lang) },
     },
@@ -85,11 +89,11 @@ export default async function RemedyPage({ params }: Props) {
         <Link href={withPrefix(prefix, "/")} lang={lang} className="hover:text-[var(--ink)]">
           {ui.home}
         </Link>
-        {post.tags[0] && (
+        {tags[0] && (
           <>
             {" / "}
-            <Link href={withPrefix(prefix, tagHref(post.tags[0]))} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
-              {post.tags[0].name}
+            <Link href={withPrefix(prefix, tagHref(tags[0]))} lang={langOf(tags[0].name)} className="hover:text-[var(--ink)]">
+              {tags[0].name}
             </Link>
           </>
         )}
@@ -100,7 +104,7 @@ export default async function RemedyPage({ params }: Props) {
       </h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        {post.tags.map((tag) => (
+        {tags.map((tag) => (
           <Link
             key={tag.id}
             href={withPrefix(prefix, tagHref(tag))}
@@ -112,6 +116,37 @@ export default async function RemedyPage({ params }: Props) {
         ))}
         <span className="text-sm text-[var(--muted)]">{formatDate(post.created_at, locale)}</span>
       </div>
+
+      {(authors.length > 0 || books.length > 0) && (
+        <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--muted)]">
+          {authors.length > 0 && (
+            <span>
+              <span lang={lang}>{ui.author}</span>:{" "}
+              {authors.map((a, i) => (
+                <span key={a.id}>
+                  {i > 0 && ", "}
+                  <Link href={withPrefix(prefix, tagHref(a))} lang={langOf(a.name)} className="font-semibold text-[var(--ink)] hover:text-[var(--brand-dark)]">
+                    {a.name}
+                  </Link>
+                </span>
+              ))}
+            </span>
+          )}
+          {books.length > 0 && (
+            <span>
+              <span lang={lang}>{ui.book}</span>:{" "}
+              {books.map((b, i) => (
+                <span key={b.id}>
+                  {i > 0 && ", "}
+                  <Link href={withPrefix(prefix, tagHref(b))} lang={langOf(b.name)} className="font-semibold text-[var(--ink)] hover:text-[var(--brand-dark)]">
+                    {b.name}
+                  </Link>
+                </span>
+              ))}
+            </span>
+          )}
+        </p>
+      )}
 
       {cover && (
         <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--line)] bg-slate-100 sm:mt-6">
