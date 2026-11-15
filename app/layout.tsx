@@ -12,7 +12,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: brand, template: `%s | ${brand}` },
     description: ui.siteDescription,
     applicationName: brand,
-    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   };
 }
 

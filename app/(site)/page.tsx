@@ -46,7 +46,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       inLanguage: lang === "en" ? "en" : "ta",
       potentialAction: { "@type": "SearchAction", target: `${pageUrl(lang === "en" ? "en" : "ta", "/")}?q={search_term_string}`, "query-input": "required name=search_term_string" },
     },
-    { "@context": "https://schema.org", "@type": "Organization", name: brand, url: SITE_URL, logo: `${SITE_URL}/icon.svg` },
+    { "@context": "https://schema.org", "@type": "Organization", name: brand, url: SITE_URL },
   ];
 
   return (

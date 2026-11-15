@@ -16,7 +16,7 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
   return (
     <header className="relative border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6 md:py-4">
-        {/* Phones: empty spacer on the left, same width as the menu button, so the logo stays centred. */}
+        {/* Phones: empty spacer on the left, same width as the menu button, so the brand name stays centred. */}
         <span aria-hidden="true" className="-ml-2 h-11 w-11 shrink-0 md:hidden" />
 
         <Link

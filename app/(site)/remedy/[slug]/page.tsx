@@ -65,7 +65,7 @@ export default async function RemedyPage({ params }: Props) {
       url,
       keywords: post.tags.map((t) => t.name).join(", ") || undefined,
       author: { "@type": "Organization", name: brandFor(lang) },
-      publisher: { "@type": "Organization", name: brandFor(lang), logo: { "@type": "ImageObject", url: absoluteUrl("/icon.svg") } },
+      publisher: { "@type": "Organization", name: brandFor(lang) },
     },
     {
       "@context": "https://schema.org",
