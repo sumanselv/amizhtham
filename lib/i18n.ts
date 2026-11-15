@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { db, isPlaceholderSlug } from "./db";
 import { getEnv } from "./env";
-import { langOf } from "./slug";
+import { AUTHOR_SECTION, BOOK_SECTION, langOf } from "./slug";
 import type { Post, PostWithTags, Tag } from "./db";
 import type { AiLike } from "./env";
 
@@ -250,7 +250,7 @@ async function translateMarkdown(lang: string, markdown: string, map: Map<string
 
 /** Tag names that need machine translation (English tags with an English address are named from the address instead). */
 function tagTexts(tags: Tag[], lang: string): string[] {
-  return tags.filter((t) => !(lang === "en" && langOf(t.name) !== "en" && englishNameFromSlug(t))).map((t) => t.name);
+  return tags.filter((t) => !isNameKept(t) && !(lang === "en" && langOf(t.name) !== "en" && englishNameFromSlug(t))).map((t) => t.name);
 }
 
 /** English display name for a tag written in another script: taken from its English web address (scutch-grass -> "Scutch grass"), which the admin controls. */
@@ -260,13 +260,18 @@ function englishNameFromSlug(tag: Tag): string | null {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
 }
 
+/** Author and book names are shown as written (like poet names), never machine-translated. */
+function isNameKept(tag: Tag): boolean {
+  return tag.section === AUTHOR_SECTION || tag.section === BOOK_SECTION;
+}
+
 function withTags(tags: Tag[], map: Map<string, string>, lang: string): Tag[] {
   return tags.map((t) => {
     if (lang === "en" && langOf(t.name) !== "en") {
       const fromSlug = englishNameFromSlug(t);
       if (fromSlug) return { ...t, name: fromSlug };
     }
-    return { ...t, name: pick(map, t.name) };
+    return isNameKept(t) ? t : { ...t, name: pick(map, t.name) };
   });
 }
 

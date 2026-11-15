@@ -3,7 +3,7 @@ import { coverUrl } from "@/components/PostCard";
 import type { PostWithTags } from "@/lib/db";
 import { imagesEnabled } from "@/lib/env";
 import { isPlaceholderSlug, tagSlugFor } from "@/lib/db";
-import { slugify } from "@/lib/slug";
+import { slugify, AUTHOR_SECTION, BOOK_SECTION } from "@/lib/slug";
 
 const NOTICES: Record<string, string> = {
   saved: "Saved. This post is a draft: it is stored in the database but NOT shown on the site until you click Publish.",
@@ -15,9 +15,13 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
   const live = post?.published === 1;
   // Prefill the category when all of this post's tags share one (other than the default "tag").
-  const sections = [...new Set(post?.tags.map((t) => t.section) ?? [])];
+  const remedyTags = post?.tags.filter((t) => t.section !== AUTHOR_SECTION && t.section !== BOOK_SECTION) ?? [];
+  const sections = [...new Set(remedyTags.map((t) => t.section))];
   const categoryDefault = sections.length === 1 && sections[0] !== "tag" ? sections[0] : "";
-  const tagDefault = post?.tags.map((t) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`)).join(", ");
+  const label = (t: { name: string; slug: string }) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`);
+  const authorsDefault = post?.tags.filter((t) => t.section === AUTHOR_SECTION).map(label).join(", ");
+  const booksDefault = post?.tags.filter((t) => t.section === BOOK_SECTION).map(label).join(", ");
+  const tagDefault = remedyTags.map((t) => (tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug) ? t.name : `${t.name} | ${t.slug}`)).join(", ");
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -63,6 +67,24 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
             <option key={t} value={t} />
           ))}
         </datalist>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <label htmlFor="authors" className="mb-1 block text-sm font-semibold">
+            Authors <span className="font-normal text-[var(--muted)]">(optional, comma separated)</span>
+          </label>
+          <input id="authors" name="authors" defaultValue={authorsDefault} className="field" placeholder="திருவள்ளுவர் | valluvar" />
+        </div>
+        <div>
+          <label htmlFor="books" className="mb-1 block text-sm font-semibold">
+            Books <span className="font-normal text-[var(--muted)]">(optional, comma separated)</span>
+          </label>
+          <input id="books" name="books" defaultValue={booksDefault} className="field" placeholder="திருக்குறள் | thirukkural" />
+        </div>
+        <p className="text-xs text-[var(--muted)] sm:col-span-2">
+          Each author and book is added as a tag with its own page: <code>/author/valluvar</code> and <code>/book/thirukkural</code>. Names are shown as written and are not translated.
+        </p>
       </div>
 
       <div>

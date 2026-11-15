@@ -5,7 +5,7 @@ import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/aut
 import { createPost, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { translateMany, warmPost } from "@/lib/i18n";
-import { cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
+import { AUTHOR_SECTION, BOOK_SECTION, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -79,7 +79,7 @@ async function withEnglishAddresses(tags: TagInput[]): Promise<TagInput[]> {
     }
     const english = (await translateMany("en", [t.name])).get(t.name);
     const slug = english ? slugify(english) : "";
-    out.push(slug && !(await getTagBySlug(slug)) ? { name: t.name, slug } : t);
+    out.push(slug && !(await getTagBySlug(slug)) ? { ...t, slug } : t);
   }
   return out;
 }
@@ -99,7 +99,13 @@ export async function savePostAction(formData: FormData): Promise<void> {
   // Three buttons: "save" keeps the current state (a new post stays a draft), "publish" shows it on the site, "unpublish" hides it again.
   const rawIntent = String(formData.get("intent") ?? "save");
   const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
-  const tags = await withEnglishAddresses(parseTagInput(String(formData.get("tags") ?? "")));
+  // Remedy tags, plus Authors and Books: each author / book becomes a tag in its own section (/author/..., /book/...).
+  const asSection = (raw: string, section: string): TagInput[] => parseTagInput(raw).map((t) => ({ ...t, section }));
+  const tags = await withEnglishAddresses([
+    ...parseTagInput(String(formData.get("tags") ?? "")),
+    ...asSection(String(formData.get("authors") ?? ""), AUTHOR_SECTION),
+    ...asSection(String(formData.get("books") ?? ""), BOOK_SECTION),
+  ]);
   const poemNote = String(formData.get("poem_note") ?? "").replace(/\r\n?/g, "\n").trim();
   const poem = String(formData.get("poem") ?? "").replace(/\r\n?/g, "\n").trim();
   const poet = String(formData.get("poet") ?? "").trim();

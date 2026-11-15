@@ -333,8 +333,9 @@ async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], categor
         tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
       }
     }
-    if (tag && category) {
-      await d1.prepare("UPDATE tags SET section = ? WHERE id = ?").bind(category, tag.id).run();
+    const section = input.section || category;
+    if (tag && section) {
+      await d1.prepare("UPDATE tags SET section = ? WHERE id = ?").bind(section, tag.id).run();
     }
     if (tag) {
       await d1.prepare("INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)").bind(postId, tag.id).run();

@@ -33,6 +33,10 @@ export function langOf(text: string): string {
   return "en";
 }
 
+/** Address sections used for the Authors and Books inputs of a post (/author/valluvar, /book/thirukkural). */
+export const AUTHOR_SECTION = "author";
+export const BOOK_SECTION = "book";
+
 /** First address segments that already belong to the site and cannot be used as a tag section. */
 export const RESERVED_SECTIONS = ["en", "og", "admin", "remedy", "tags", "contact", "lang", "img", "icon", "sitemap", "robots", "api", "_next", "static", "assets"];
 
@@ -66,6 +70,8 @@ export interface TagInput {
   name: string;
   /** English URL name for the tag, if the admin typed one ("நெல்லிக்காய் | amla"). */
   slug?: string;
+  /** Address section forced for this tag (authors use "author", books use "book"). */
+  section?: string;
 }
 
 /**
