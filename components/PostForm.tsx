@@ -14,20 +14,22 @@ const NOTICES: Record<string, string> = {
 export default function PostForm({ post, error, notice, tagSuggestions }: { post?: PostWithTags; error?: string; notice?: string; tagSuggestions: string[] }) {
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
   const live = post?.published === 1;
-  // Prefill the category when all of this post's tags share one (other than the default "tag").
-  const remedyTags = post?.tags.filter((t) => t.section !== AUTHOR_SECTION && t.section !== BOOK_SECTION) ?? [];
-  const sections = [...new Set(remedyTags.map((t) => t.section))];
-  const categoryDefault = sections.length === 1 && sections[0] !== "tag" ? sections[0] : "";
-  // "name", "name | english-address" or "name | type/english-address" (type shown when it differs from the common category).
-  const label = (t: { name: string; slug: string; section: string }, showType = false) => {
-    const type = showType && t.section !== "tag" && t.section !== categoryDefault ? `${t.section}/` : "";
+  const HERB = "plant";
+  const CAUSE = "causes";
+  const inSection = (name: string) => post?.tags.filter((t) => t.section === name) ?? [];
+  // Tags from before Herbs and Causes existed (/tag/...): kept until they are moved into Herbs or Causes.
+  const otherTags = post?.tags.filter((t) => ![HERB, CAUSE, AUTHOR_SECTION, BOOK_SECTION].includes(t.section)) ?? [];
+  // "name" or "name | english-address" (the address is only written when it was chosen by hand).
+  const label = (t: { name: string; slug: string }) => {
     const plain = tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug);
-    if (plain && !type) return t.name;
-    return `${t.name} | ${type}${plain ? tagSlugFor(t.name) || t.slug : t.slug}`;
+    return plain ? t.name : `${t.name} | ${t.slug}`;
   };
-  const authorsDefault = post?.tags.filter((t) => t.section === AUTHOR_SECTION).map((t) => label(t)).join(", ");
-  const booksDefault = post?.tags.filter((t) => t.section === BOOK_SECTION).map((t) => label(t)).join(", ");
-  const tagDefault = remedyTags.map((t) => label(t, true)).join(", ");
+  const join = (list: { name: string; slug: string }[]) => list.map(label).join(", ");
+  const herbsDefault = join(inSection(HERB));
+  const causesDefault = join(inSection(CAUSE));
+  const authorsDefault = join(inSection(AUTHOR_SECTION));
+  const booksDefault = join(inSection(BOOK_SECTION));
+  const otherDefault = join(otherTags);
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -59,16 +61,22 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         <p className="mt-1 text-xs text-[var(--muted)]">The address stays in English: /remedy/this-name. If the title is in Tamil and this is empty, a code like remedy-k3f9x2 is used. Changing it later breaks old links.</p>
       </div>
 
-      <div>
-        <label htmlFor="tags" className="mb-1 block text-sm font-semibold">
-          Remedy tags <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
-        </label>
-        <input id="tags" name="tags" list="tag-list" defaultValue={tagDefault} className="field" placeholder="நெல்லிக்காய் | amla, தேன் | honey" />
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          Just type the tag name in any language. The web address is made from its English meaning automatically, e.g. நெல்லிக்காய் becomes <code>/tag/amla</code>.
-          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. To give a tag a <b>type</b>, put it before the name:
-          <code> அறுகம்புல் | plant/scutch-grass</code> makes <code>/plant/scutch-grass</code>, and <code> இருமல் | causes/cough</code> makes <code>/causes/cough</code>.
-          You can change addresses later in Admin &gt; Tags.
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <label htmlFor="herbs" className="mb-1 block text-sm font-semibold">
+            Herbs <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
+          </label>
+          <input id="herbs" name="herbs" list="tag-list" defaultValue={herbsDefault} className="field" placeholder="அறுகம்புல் | scutch-grass, நெல்லிக்காய்" />
+        </div>
+        <div>
+          <label htmlFor="causes" className="mb-1 block text-sm font-semibold">
+            Causes <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
+          </label>
+          <input id="causes" name="causes" list="tag-list" defaultValue={causesDefault} className="field" placeholder="இருமல் | cough, காய்ச்சல்" />
+        </div>
+        <p className="text-xs text-[var(--muted)] sm:col-span-2">
+          Type names in any language. The web address is made from the English meaning automatically: a herb gets <code>/plant/scutch-grass</code>, a cause gets <code>/causes/cough</code>.
+          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can change addresses later in Admin &gt; Tags.
         </p>
         <datalist id="tag-list">
           {tagSuggestions.map((t) => (
@@ -76,6 +84,16 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
           ))}
         </datalist>
       </div>
+
+      {otherTags.length > 0 && (
+        <div>
+          <label htmlFor="tags" className="mb-1 block text-sm font-semibold">
+            Other tags <span className="font-normal text-[var(--muted)]">(older tags)</span>
+          </label>
+          <input id="tags" name="tags" defaultValue={otherDefault} className="field" />
+          <p className="mt-1 text-xs text-[var(--muted)]">These tags were added before Herbs and Causes existed. Move each one into Herbs or Causes above (and delete it from here) to give it a <code>/plant/</code> or <code>/causes/</code> address. Left here, it stays as it is.</p>
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div>
@@ -92,17 +110,6 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         </div>
         <p className="text-xs text-[var(--muted)] sm:col-span-2">
           Each author and book is added as a tag with its own page: <code>/author/valluvar</code> and <code>/book/thirukkural</code>. Names are shown as written and are not translated.
-        </p>
-      </div>
-
-      <div>
-        <label htmlFor="category" className="mb-1 block text-sm font-semibold">
-          Category <span className="font-normal text-[var(--muted)]">(optional, English)</span>
-        </label>
-        <input id="category" name="category" defaultValue={categoryDefault} maxLength={30} className="field" placeholder="fruit" />
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          Leave empty for the usual <code>/tag/amla</code>. Type <code>fruit</code> and this post&apos;s tags use <code>/fruit/amla</code> instead
-          (old addresses redirect). It changes the tags above, so every post with those tags follows.
         </p>
       </div>
 

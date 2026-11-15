@@ -34,6 +34,9 @@ export function langOf(text: string): string {
 }
 
 /** Address sections used for the Authors and Books inputs of a post (/author/valluvar, /book/thirukkural). */
+/** Herbs and causes are the two kinds of tag: /plant/scutch-grass and /causes/cough. */
+export const HERB_SECTION = "plant";
+export const CAUSE_SECTION = "causes";
 export const AUTHOR_SECTION = "author";
 export const BOOK_SECTION = "book";
 

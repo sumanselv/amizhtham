@@ -5,7 +5,7 @@ import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/aut
 import { createPost, createTag, deleteUnusedTag, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { translateMany, warmPost } from "@/lib/i18n";
-import { AUTHOR_SECTION, BOOK_SECTION, randomCode, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
+import { AUTHOR_SECTION, BOOK_SECTION, CAUSE_SECTION, HERB_SECTION, randomCode, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -99,10 +99,12 @@ export async function savePostAction(formData: FormData): Promise<void> {
   // Three buttons: "save" keeps the current state (a new post stays a draft), "publish" shows it on the site, "unpublish" hides it again.
   const rawIntent = String(formData.get("intent") ?? "save");
   const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
-  // Remedy tags, plus Authors and Books: each author / book becomes a tag in its own section (/author/..., /book/...).
+  // Herbs (/plant/...), Causes (/causes/...), Authors (/author/...) and Books (/book/...): each name gets its own address section.
   const asSection = (raw: string, section: string): TagInput[] => parseTagInput(raw).map((t) => ({ ...t, section }));
   const tags = await withEnglishAddresses([
-    ...parseTagInput(String(formData.get("tags") ?? "")),
+    ...asSection(String(formData.get("herbs") ?? ""), HERB_SECTION),
+    ...asSection(String(formData.get("causes") ?? ""), CAUSE_SECTION),
+    ...parseTagInput(String(formData.get("tags") ?? "")), // older tags, kept as they are
     ...asSection(String(formData.get("authors") ?? ""), AUTHOR_SECTION),
     ...asSection(String(formData.get("books") ?? ""), BOOK_SECTION),
   ]);
