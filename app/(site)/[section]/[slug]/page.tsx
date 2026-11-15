@@ -4,7 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { notFound, redirect } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
-import { PAGE_SIZE, getTagBySlug, listPosts } from "@/lib/db";
+import { PAGE_SIZE, getTagBySlug, listBooksByAuthor, listPosts } from "@/lib/db";
 import { decodeParam, langOf, tagHref } from "@/lib/slug";
 import { brandFor } from "@/lib/brand";
 import { getLang, getPrefix, languageOf, localizePosts, localizeTags, withPrefix } from "@/lib/i18n";
@@ -25,7 +25,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const [tag] = await localizeTags(lang, [rawTag]);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const alternates = alternatesFor(lang, tagHref(rawTag), page > 1 ? `?page=${page}` : "");
-  const title = `${tag.name} ${ui.tagSuffix}`;
+  const title = rawTag.section === "author" || rawTag.section === "book" ? tag.name : `${tag.name} ${ui.tagSuffix}`;
   return {
     title,
     description: title,
@@ -46,7 +46,8 @@ export default async function TagPage({ params, searchParams }: Props) {
   const prefix = await getPrefix();
   const ui = await getUi(lang);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
-  const { posts: rawPosts, total } = await listPosts({ tagSlug: rawTag.slug, page });
+  const isAuthor = rawTag.section === "author";
+  const [{ posts: rawPosts, total }, books] = await Promise.all([listPosts({ tagSlug: rawTag.slug, page }), isAuthor ? listBooksByAuthor(rawTag.slug) : Promise.resolve([])]);
   const [[tag], posts] = await Promise.all([localizeTags(lang, [rawTag]), localizePosts(lang, rawPosts)]);
   tag.slug = rawTag.slug; // the web address always stays English
   const locale = languageOf(lang).locale;
@@ -86,6 +87,26 @@ export default async function TagPage({ params, searchParams }: Props) {
       <p lang={lang} className="mt-2 text-[var(--muted)]">
         {ui.postsUsingThis}
       </p>
+
+      {books.length > 0 && (
+        <section aria-label={ui.booksByAuthor} className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--brand-soft)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 lang={lang} className="font-bold">{ui.booksByAuthor}</h2>
+            <Link href={withPrefix(prefix, `${tagHref(rawTag)}/books`)} lang={lang} className="text-sm font-semibold text-[var(--brand-dark)] hover:underline">
+              {ui.allBooks}
+            </Link>
+          </div>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {books.map((b) => (
+              <li key={b.id}>
+                <Link href={withPrefix(prefix, tagHref(b))} lang={langOf(b.name)} className="inline-block rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)]">
+                  {b.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {posts.length === 0 ? (
         <p lang={lang} className="mt-8 rounded-xl border border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">

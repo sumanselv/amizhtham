@@ -285,6 +285,25 @@ export async function deleteUnusedTag(id: number): Promise<void> {
   await d1.prepare("DELETE FROM tags WHERE id = ? AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").bind(id).run();
 }
 
+/** Books (tags in the "book" section) that share a published post with the given author. */
+export async function listBooksByAuthor(authorSlug: string): Promise<Tag[]> {
+  const d1 = await db();
+  const rows = await d1
+    .prepare(
+      `SELECT b.id AS id, b.name AS name, b.slug AS slug, b.section AS section, COUNT(DISTINCT p.id) AS post_count
+       FROM tags a
+       JOIN post_tags pa ON pa.tag_id = a.id
+       JOIN posts p ON p.id = pa.post_id AND p.published = 1
+       JOIN post_tags pb ON pb.post_id = p.id
+       JOIN tags b ON b.id = pb.tag_id AND b.section = 'book'
+       WHERE a.slug = ? AND a.section = 'author'
+       GROUP BY b.id ORDER BY b.name`,
+    )
+    .bind(authorSlug)
+    .all<Tag>();
+  return rows.results;
+}
+
 export async function listAllTagNames(): Promise<string[]> {
   const d1 = await db();
   const rows = await d1.prepare("SELECT name FROM tags ORDER BY name").all<{ name: string }>();
