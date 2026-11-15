@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 import { notFound } from "next/navigation";
 import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
 import { decodeParam, formatDate, langOf, tagHref } from "@/lib/slug";
-import { getLang, languageOf, localizePost, localizePosts } from "@/lib/i18n";
+import { brandFor } from "@/lib/brand";
+import { getLang, getPrefix, languageOf, localizePost, localizePosts, withPrefix } from "@/lib/i18n";
+import { alternatesFor, pageUrl, shareMeta, absoluteUrl } from "@/lib/seo";
 import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +20,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const raw = await getPostBySlug(decodeParam(slug));
   const lang = await getLang();
   if (!raw) return { title: (await getUi(lang)).notFound };
-  const post = { ...raw, ...(await localizePosts(lang, [raw]))[0] };
+  const post = await localizePost(lang, raw);
   const description = post.description || plainExcerpt(post.content);
   const image = coverUrl(post.cover_image);
+  const alternates = alternatesFor(lang, `/remedy/${encodeURIComponent(post.slug)}`);
+  // An English page that is only partly translated yet is kept out of search results until it is complete.
+  const incomplete = lang !== "ta" && post.untranslated > 0;
   return {
     title: post.title,
     description,
-    alternates: { canonical: `/remedy/${encodeURIComponent(post.slug)}` },
-    openGraph: { title: post.title, description, type: "article", images: image ? [image] : undefined },
+    alternates,
+    ...shareMeta({ lang, title: post.title, description, url: alternates.canonical, image, type: "article", siteName: brandFor(lang) }),
+    ...(incomplete ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -34,22 +41,54 @@ export default async function RemedyPage({ params }: Props) {
   if (!raw) notFound();
 
   const lang = await getLang();
+  const prefix = await getPrefix();
   const ui = await getUi(lang);
   const post = await localizePost(lang, raw);
   const related = await localizePosts(lang, await listRelatedPosts(raw));
   const locale = languageOf(lang).locale;
   const cover = coverUrl(post.cover_image);
 
+  const pLang = lang === "en" ? "en" : "ta";
+  const url = pageUrl(pLang, `/remedy/${encodeURIComponent(post.slug)}`);
+  const firstTag = post.tags[0];
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title.slice(0, 110),
+      description: post.description || plainExcerpt(post.content),
+      image: [absoluteUrl(cover)],
+      datePublished: post.created_at,
+      dateModified: post.updated_at,
+      inLanguage: pLang,
+      mainEntityOfPage: url,
+      url,
+      keywords: post.tags.map((t) => t.name).join(", ") || undefined,
+      author: { "@type": "Organization", name: brandFor(lang) },
+      publisher: { "@type": "Organization", name: brandFor(lang), logo: { "@type": "ImageObject", url: absoluteUrl("/icon.svg") } },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: ui.home, item: pageUrl(pLang, "/") },
+        ...(firstTag ? [{ "@type": "ListItem", position: 2, name: firstTag.name, item: pageUrl(pLang, tagHref(firstTag)) }] : []),
+        { "@type": "ListItem", position: firstTag ? 3 : 2, name: post.title, item: url },
+      ],
+    },
+  ];
+
   return (
     <article className="mx-auto max-w-3xl">
+      <JsonLd data={jsonLd} />
       <nav className="mb-4 text-sm text-[var(--muted)]">
-        <Link href="/" lang={lang} className="hover:text-[var(--ink)]">
+        <Link href={withPrefix(prefix, "/")} lang={lang} className="hover:text-[var(--ink)]">
           {ui.home}
         </Link>
         {post.tags[0] && (
           <>
             {" / "}
-            <Link href={tagHref(post.tags[0])} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
+            <Link href={withPrefix(prefix, tagHref(post.tags[0]))} lang={langOf(post.tags[0].name)} className="hover:text-[var(--ink)]">
               {post.tags[0].name}
             </Link>
           </>
@@ -64,7 +103,7 @@ export default async function RemedyPage({ params }: Props) {
         {post.tags.map((tag) => (
           <Link
             key={tag.id}
-            href={tagHref(tag)}
+            href={withPrefix(prefix, tagHref(tag))}
             lang={langOf(tag.name)}
             className="rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
           >

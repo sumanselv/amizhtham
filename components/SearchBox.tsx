@@ -3,12 +3,12 @@
 import { useState } from "react";
 
 /** Search input; the button only shows up once the visitor has typed something (Enter always searches). */
-export default function SearchBox({ idPrefix, query, label, lang }: { idPrefix: string; query: string; label: string; lang: string }) {
+export default function SearchBox({ idPrefix, query, label, lang, action }: { idPrefix: string; query: string; label: string; lang: string; action: string }) {
   const [value, setValue] = useState(query);
   const hasText = value.trim().length > 0;
 
   return (
-    <form action="/" method="get" role="search" className="flex w-full gap-2">
+    <form action={action} method="get" role="search" className="flex w-full gap-2">
       <label htmlFor={`${idPrefix}-q`} className="sr-only" lang={lang}>
         {label}
       </label>

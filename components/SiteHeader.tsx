@@ -4,7 +4,7 @@ import MobileMenu from "./MobileMenu";
 import SearchForm from "./SearchForm";
 import LangSwitcher from "./LangSwitcher";
 import { brandFor } from "@/lib/brand";
-import { getLang } from "@/lib/i18n";
+import { getLang, prefixFor, withPrefix } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
 export default async function SiteHeader({ query = "" }: { query?: string }) {
@@ -12,6 +12,8 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
   const ui = await getUi(lang);
   const HOME_LABEL = ui.home;
   const brand = brandFor(lang);
+  const home = withPrefix(prefixFor(lang), "/");
+  const contact = withPrefix(prefixFor(lang), "/contact");
   return (
     <header className="relative border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6 md:py-4">
@@ -19,7 +21,7 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
         <span aria-hidden="true" className="-ml-2 h-11 w-11 shrink-0 md:hidden" />
 
         <Link
-          href="/"
+          href={home}
           lang={lang === "ta" ? "ta" : "en"}
           className="mx-auto flex items-center gap-2 text-2xl font-bold text-[var(--brand-dark)] md:mx-0 md:text-[1.7rem]"
         >
@@ -29,10 +31,10 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
 
         {/* Desktop: Home link and search box in the bar. */}
         <nav className="ml-10 hidden text-base font-semibold text-[var(--muted)] md:block">
-          <Link href="/" lang={lang} className="hover:text-[var(--ink)]">
+          <Link href={home} lang={lang} className="hover:text-[var(--ink)]">
             {HOME_LABEL}
           </Link>
-          <Link href="/contact" lang={lang} className="ml-6 hover:text-[var(--ink)]">
+          <Link href={contact} lang={lang} className="ml-6 hover:text-[var(--ink)]">
             {ui.contact}
           </Link>
         </nav>
@@ -45,10 +47,10 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
 
         {/* Phones and small tablets: three-line menu on the right (Home link and search inside). */}
         <MobileMenu>
-          <Link href="/" lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
+          <Link href={home} lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
             {HOME_LABEL}
           </Link>
-          <Link href="/contact" lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
+          <Link href={contact} lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
             {ui.contact}
           </Link>
           <SearchForm idPrefix="mobile" query={query} />

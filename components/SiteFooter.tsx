@@ -1,5 +1,5 @@
 import { brandFor, mottoFor } from "@/lib/brand";
-import { getLang } from "@/lib/i18n";
+import { getLang, prefixFor } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
 export default async function SiteFooter() {
@@ -12,7 +12,7 @@ export default async function SiteFooter() {
           {ui.disclaimerFooter}
         </p>
         <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <a href="/contact" lang={lang} className="font-semibold hover:text-[var(--ink)]">{ui.contact}</a>
+          <a href={`${prefixFor(lang)}/contact`} lang={lang} className="font-semibold hover:text-[var(--ink)]">{ui.contact}</a>
           © {new Date().getFullYear()} <span lang={lang === "ta" ? "ta" : "en"}>{brandFor(lang)}</span>
         </p>
         <p lang={lang === "ta" ? "ta" : "en"} className="mt-6 text-center">

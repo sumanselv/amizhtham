@@ -6,15 +6,25 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("l");
 
   let back = "/";
+  let backPath = "/";
+  let backSearch = "";
   const ref = request.headers.get("referer");
   if (ref) {
     try {
       const r = new URL(ref);
-      if (r.origin === url.origin && !r.pathname.startsWith("/lang")) back = r.pathname + r.search;
+      if (r.origin === url.origin && !r.pathname.startsWith("/lang")) {
+        backPath = r.pathname;
+        backSearch = r.search;
+      }
     } catch {
       /* ignore a bad referer */
     }
   }
+
+  // English pages have their own /en addresses; every other language uses the normal address.
+  const plain = backPath === "/en" ? "/" : backPath.startsWith("/en/") ? backPath.slice(3) : backPath;
+  const isAdmin = plain.startsWith("/admin");
+  back = (code === "en" && !isAdmin ? (plain === "/" ? "/en" : `/en${plain}`) : plain) + backSearch;
 
   const headers = new Headers({ Location: back, "Cache-Control": "no-store" });
   if (isLang(code)) {

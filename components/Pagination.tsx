@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLang } from "@/lib/i18n";
+import { getLang, prefixFor, withPrefix } from "@/lib/i18n";
 import { getUi } from "@/lib/ui";
 
 export default async function Pagination({
@@ -17,6 +17,7 @@ export default async function Pagination({
 }) {
   const lang = await getLang();
   const ui = await getUi(lang);
+  const base = withPrefix(prefixFor(lang), basePath);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (pages <= 1) return null;
 
@@ -25,7 +26,7 @@ export default async function Pagination({
     if (query) sp.set("q", query);
     if (p > 1) sp.set("page", String(p));
     const qs = sp.toString();
-    return qs ? `${basePath}?${qs}` : basePath;
+    return qs ? `${base}?${qs}` : base;
   };
 
   return (

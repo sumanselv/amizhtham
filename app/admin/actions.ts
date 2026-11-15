@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
 import { createPost, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { translateMany } from "@/lib/i18n";
+import { translateMany, warmPost } from "@/lib/i18n";
 import { cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -159,6 +159,16 @@ export async function savePostAction(formData: FormData): Promise<void> {
     if (replacedPoetImage && replacedPoetImage !== poetImage) await removeImageIfUnused(replacedPoetImage, id);
   } else {
     postId = await createPost(input);
+  }
+
+  // Translate the post into English now, so its /en page is complete before search engines visit it.
+  if (published && postId) {
+    try {
+      const fresh = await getPostById(postId);
+      if (fresh) await warmPost("en", fresh);
+    } catch {
+      /* best effort: the page also translates itself when visited */
+    }
   }
 
   if (intent === "publish") redirect("/admin?saved=published");

@@ -2,18 +2,28 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listTags } from "@/lib/db";
 import { langOf, tagHref } from "@/lib/slug";
-import { getLang, localizeTags } from "@/lib/i18n";
+import { brandFor } from "@/lib/brand";
+import { getLang, getPrefix, localizeTags, withPrefix } from "@/lib/i18n";
+import { alternatesFor, shareMeta } from "@/lib/seo";
 import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const ui = await getUi(await getLang());
-  return { title: ui.allRemedies, description: ui.allRemediesSub };
+  const lang = await getLang();
+  const ui = await getUi(lang);
+  const alternates = alternatesFor(lang, "/tags");
+  return {
+    title: ui.allRemedies,
+    description: ui.allRemediesSub,
+    alternates,
+    ...shareMeta({ lang, title: `${ui.allRemedies} | ${brandFor(lang)}`, description: ui.allRemediesSub, url: alternates.canonical, siteName: brandFor(lang) }),
+  };
 }
 
 export default async function TagsPage() {
   const lang = await getLang();
+  const prefix = await getPrefix();
   const [rawTags, ui] = await Promise.all([listTags(), getUi(lang)]);
   const tags = await localizeTags(lang, rawTags);
   return (
@@ -28,7 +38,7 @@ export default async function TagsPage() {
           {tags.map((tag) => (
             <li key={tag.id}>
               <Link
-                href={tagHref(tag)}
+                href={withPrefix(prefix, tagHref(tag))}
                 className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white p-4 font-semibold hover:border-[var(--brand)] hover:shadow-sm"
               >
                 <span lang={langOf(tag.name)}>{tag.name}</span>

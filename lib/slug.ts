@@ -34,7 +34,7 @@ export function langOf(text: string): string {
 }
 
 /** First address segments that already belong to the site and cannot be used as a tag section. */
-export const RESERVED_SECTIONS = ["admin", "remedy", "tags", "contact", "lang", "img", "icon", "sitemap", "robots", "api", "_next", "static", "assets"];
+export const RESERVED_SECTIONS = ["en", "og", "admin", "remedy", "tags", "contact", "lang", "img", "icon", "sitemap", "robots", "api", "_next", "static", "assets"];
 
 /** Clean a tag section typed by the admin (English a-z, 0-9, hyphens). Empty becomes "tag"; returns null for a reserved word. */
 export function cleanSection(raw: string): string | null {

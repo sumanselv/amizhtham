@@ -1,28 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 import { notFound, redirect } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, getTagBySlug, listPosts } from "@/lib/db";
 import { decodeParam, langOf, tagHref } from "@/lib/slug";
-import { getLang, languageOf, localizePosts, localizeTags } from "@/lib/i18n";
+import { brandFor } from "@/lib/brand";
+import { getLang, getPrefix, languageOf, localizePosts, localizeTags, withPrefix } from "@/lib/i18n";
+import { alternatesFor, pageUrl, shareMeta } from "@/lib/seo";
 import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ section: string; slug: string }>; searchParams: Promise<{ page?: string }> };
 
-export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const sp = await searchParams;
   const rawTag = await getTagBySlug(decodeParam(slug));
   const lang = await getLang();
   const ui = await getUi(lang);
   if (!rawTag) return { title: ui.notFound };
   const [tag] = await localizeTags(lang, [rawTag]);
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const alternates = alternatesFor(lang, tagHref(rawTag), page > 1 ? `?page=${page}` : "");
+  const title = `${tag.name} ${ui.tagSuffix}`;
   return {
-    title: `${tag.name} ${ui.tagSuffix}`,
-    description: `${tag.name} ${ui.tagSuffix}`,
-    alternates: { canonical: tagHref(rawTag) },
+    title,
+    description: title,
+    alternates,
+    ...shareMeta({ lang, title: `${title} | ${brandFor(lang)}`, description: title, url: alternates.canonical, siteName: brandFor(lang) }),
   };
 }
 
@@ -32,9 +40,10 @@ export default async function TagPage({ params, searchParams }: Props) {
   const rawTag = await getTagBySlug(decodeParam(slug));
   if (!rawTag) notFound();
   // Old or mistyped prefix (e.g. /tag/amla after it moved to /fruit/amla): go to the current address.
-  if (decodeParam(section) !== rawTag.section) redirect(tagHref(rawTag) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
+  if (decodeParam(section) !== rawTag.section) redirect(withPrefix(await getPrefix(), tagHref(rawTag)) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
 
   const lang = await getLang();
+  const prefix = await getPrefix();
   const ui = await getUi(lang);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const { posts: rawPosts, total } = await listPosts({ tagSlug: rawTag.slug, page });
@@ -42,10 +51,31 @@ export default async function TagPage({ params, searchParams }: Props) {
   tag.slug = rawTag.slug; // the web address always stays English
   const locale = languageOf(lang).locale;
 
+  const pLang = lang === "en" ? "en" : "ta";
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: `${tag.name} ${ui.tagSuffix}`,
+      url: pageUrl(pLang, tagHref(rawTag)),
+      inLanguage: pLang,
+      isPartOf: { "@type": "WebSite", name: brandFor(lang), url: pageUrl(pLang, "/") },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: ui.home, item: pageUrl(pLang, "/") },
+        { "@type": "ListItem", position: 2, name: tag.name, item: pageUrl(pLang, tagHref(rawTag)) },
+      ],
+    },
+  ];
+
   return (
     <>
+      <JsonLd data={jsonLd} />
       <nav className="mb-4 text-sm text-[var(--muted)]">
-        <Link href="/" lang={lang} className="hover:text-[var(--ink)]">
+        <Link href={withPrefix(prefix, "/")} lang={lang} className="hover:text-[var(--ink)]">
           {ui.home}
         </Link>
       </nav>

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { db, isPlaceholderSlug } from "./db";
 import { getEnv } from "./env";
@@ -39,8 +39,17 @@ export function languageOf(code: string): Language {
   return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0];
 }
 
-/** The visitor's language: their saved choice (language menu), otherwise Tamil, the site's primary language. */
+/** Request header set by the middleware for addresses that start with /en (English pages). */
+export const LANG_HEADER = "x-site-lang";
+
+/** The page language: English for /en/... addresses, otherwise the visitor's saved choice (language menu), otherwise Tamil, the site's primary language. */
 export const getLang = cache(async (): Promise<string> => {
+  try {
+    const forced = (await headers()).get(LANG_HEADER);
+    if (isLang(forced)) return forced;
+  } catch {
+    /* no request headers available */
+  }
   try {
     const saved = (await cookies()).get(LANG_COOKIE)?.value;
     if (isLang(saved)) return saved;
@@ -49,6 +58,22 @@ export const getLang = cache(async (): Promise<string> => {
   }
   return SOURCE_LANG;
 });
+
+/** Address prefix for a language: English pages live under /en, Tamil (the default) has none. */
+export function prefixFor(lang: string): string {
+  return lang === "en" ? "/en" : "";
+}
+
+/** Prefix to put in front of internal links on the current page ("/en" or ""). */
+export async function getPrefix(): Promise<string> {
+  return prefixFor(await getLang());
+}
+
+/** Put the language prefix in front of an internal path ("/" becomes "/en"). */
+export function withPrefix(prefix: string, path: string): string {
+  if (!prefix) return path;
+  return path === "/" ? prefix : prefix + path;
+}
 
 /* ------------------------------ translation ------------------------------ */
 
@@ -123,7 +148,7 @@ async function hash(text: string): Promise<string> {
 const HAS_LETTER = /\p{L}/u;
 
 /** Translate many texts into `lang`. Returns a map from the original text to its translation (missing = keep original). */
-export async function translateMany(lang: string, texts: string[]): Promise<Map<string, string>> {
+export async function translateMany(lang: string, texts: string[], opts: { limit?: number } = {}): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const todo = [...new Set(texts.map((t) => t.trim()).filter((t) => t && HAS_LETTER.test(t) && langOf(t) !== lang))];
   if (todo.length === 0) return out;
@@ -153,8 +178,8 @@ export async function translateMany(lang: string, texts: string[]): Promise<Map<
     const ai = getEnv().AI;
     if (!ai || missing.length === 0) return out;
     const b = budget();
-    const batch = missing.slice(0, Math.max(0, MAX_NEW_PER_REQUEST - b.used));
-    b.used += batch.length;
+    const batch = missing.slice(0, Math.max(0, (opts.limit ?? MAX_NEW_PER_REQUEST) - (opts.limit ? 0 : b.used)));
+    if (!opts.limit) b.used += batch.length;
     const fresh: { key: string; text: string; from: string }[] = [];
     let next = 0;
     const worker = async () => {
@@ -259,13 +284,17 @@ export async function localizePosts(lang: string, posts: PostWithTags[]): Promis
 }
 
 /** Full post including its body (only used on the post page). */
-export async function localizePost(lang: string, post: PostWithTags): Promise<PostWithTags> {
+export async function localizePost(lang: string, post: PostWithTags): Promise<PostWithTags & { untranslated: number }> {
   const lines = splitLines(post.content).map((l) => l.body);
   const noteLines = post.poem_note.split("\n");
   // The poem and the poet's name are NOT translated; only the explanation of the poem is.
   const map = await translateMany(lang, [post.title, post.description, ...tagTexts(post.tags, lang), ...lines, ...noteLines]);
+  const untranslated = [post.title, post.description, ...lines, ...noteLines].filter(
+    (t) => t.trim() && HAS_LETTER.test(t) && langOf(t) !== lang && !map.has(t.trim()),
+  ).length;
   return {
     ...post,
+    untranslated,
     title: pick(map, post.title),
     description: pick(map, post.description),
     content: await translateMarkdown(lang, post.content, map),
@@ -275,3 +304,11 @@ export async function localizePost(lang: string, post: PostWithTags): Promise<Po
 }
 
 export type { Post };
+
+/** Translate every text of a post into `lang` right now (used when publishing, so the English page is complete before search engines see it). Returns how many texts are still missing. */
+export async function warmPost(lang: string, post: PostWithTags): Promise<number> {
+  if (lang === SOURCE_LANG) return 0;
+  const texts = [post.title, post.description, ...tagTexts(post.tags, lang), ...splitLines(post.content).map((l) => l.body), ...post.poem_note.split("\n")];
+  const map = await translateMany(lang, texts, { limit: 40 });
+  return texts.filter((t) => t.trim() && HAS_LETTER.test(t) && langOf(t) !== lang && !map.has(t.trim())).length;
+}

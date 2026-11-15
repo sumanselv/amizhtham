@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
 import { formatDate, langOf, tagHref } from "@/lib/slug";
+import { getPrefix, withPrefix } from "@/lib/i18n";
 
 export function coverUrl(key: string | null): string | null {
   return key ? `/img/${encodeURIComponent(key)}` : null;
 }
 
-export default function PostCard({ post, locale }: { post: PostWithTags; locale?: string }) {
+export default async function PostCard({ post, locale }: { post: PostWithTags; locale?: string }) {
   const cover = coverUrl(post.cover_image);
+  const prefix = await getPrefix();
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -25,7 +27,7 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
             {post.tags.map((tag) => (
               <li key={tag.id}>
                 <Link
-                  href={tagHref(tag)}
+                  href={withPrefix(prefix, tagHref(tag))}
                   lang={langOf(tag.name)}
                   className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
                 >
@@ -38,7 +40,7 @@ export default function PostCard({ post, locale }: { post: PostWithTags; locale?
 
         {/* Title and description take the space they need (long ones are trimmed), so each card fits its own text. */}
         <h2 lang={langOf(post.title)} className="line-clamp-3 text-base font-bold leading-snug text-[var(--ink)] sm:text-lg">
-          <Link href={`/remedy/${encodeURIComponent(post.slug)}`} className="after:absolute after:inset-0 after:content-['']">
+          <Link href={withPrefix(prefix, `/remedy/${encodeURIComponent(post.slug)}`)} className="after:absolute after:inset-0 after:content-['']">
             {post.title}
           </Link>
         </h2>

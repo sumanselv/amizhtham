@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
+import { brandFor } from "@/lib/brand";
 import { getLang } from "@/lib/i18n";
+import { alternatesFor, shareMeta } from "@/lib/seo";
 import { getUi } from "@/lib/ui";
 import { sendContactAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const ui = await getUi(await getLang());
-  return { title: ui.contact, description: ui.contactSub };
+  const lang = await getLang();
+  const ui = await getUi(lang);
+  const alternates = alternatesFor(lang, "/contact");
+  return {
+    title: ui.contact,
+    description: ui.contactSub,
+    alternates,
+    ...shareMeta({ lang, title: `${ui.contact} | ${brandFor(lang)}`, description: ui.contactSub, url: alternates.canonical, siteName: brandFor(lang) }),
+  };
 }
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string }> }) {
