@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Logo from "./Logo";
 import MobileMenu from "./MobileMenu";
 import SearchForm from "./SearchForm";
 import LangSwitcher from "./LangSwitcher";
@@ -25,7 +24,6 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
           lang={lang === "ta" ? "ta" : "en"}
           className="mx-auto flex items-center gap-2 text-2xl font-bold text-[var(--brand-dark)] md:mx-0 md:text-[1.7rem]"
         >
-          <Logo className="h-10 w-10 md:h-11 md:w-11" />
           {brand}
         </Link>
 
