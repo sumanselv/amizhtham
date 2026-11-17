@@ -30,6 +30,8 @@ export interface Post {
   published: number;
   created_at: string;
   updated_at: string;
+  /** When the post first went live. Shown as the post date. */
+  published_at: string | null;
 }
 
 export interface PostWithTags extends Post {
@@ -88,7 +90,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "7";
+const SCHEMA_VERSION = "8";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -134,6 +136,12 @@ async function init(): Promise<D1Like> {
     const { n } = (await d1.prepare("SELECT COUNT(*) AS n FROM posts").first<{ n: number }>()) ?? { n: 0 };
     if (n === 0) await seedSamples(d1);
   }
+  try {
+    await d1.prepare("ALTER TABLE posts ADD COLUMN published_at TEXT").run();
+  } catch {
+    /* column already exists */
+  }
+  await d1.prepare("UPDATE posts SET published_at = created_at WHERE published = 1 AND published_at IS NULL").run();
   await d1.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_v', ?)").bind(SCHEMA_VERSION).run();
   return d1;
 }
@@ -141,9 +149,9 @@ async function init(): Promise<D1Like> {
 /* ------------------------------ reading ------------------------------ */
 
 /** Columns a post card needs. The long text (body, poem, explanation) is only loaded for the post page. */
-const CARD_COLS = "p.id, p.title, p.slug, p.description, p.cover_image, p.published, p.created_at, p.updated_at";
+const CARD_COLS = "p.id, p.title, p.slug, p.description, p.cover_image, p.published, p.created_at, p.updated_at, p.published_at";
 
-type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at">;
+type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at" | "published_at">;
 
 function fullPost(r: CardRow | Post): Post {
   return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", ...r };
@@ -187,7 +195,7 @@ export async function listPosts(opts: {
       .bind(...params)
       .first<{ n: number }>(),
     d1
-      .prepare(`SELECT DISTINCT ${opts.withContent ? "p.*" : CARD_COLS} ${base} ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`)
+      .prepare(`SELECT DISTINCT ${opts.withContent ? "p.*" : CARD_COLS} ${base} ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT ? OFFSET ?`)
       .bind(...params, pageSize, (page - 1) * pageSize)
       .all<CardRow>(),
   ]);
@@ -475,10 +483,10 @@ export async function createPost(input: PostInput): Promise<number> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title));
   await d1
     .prepare(
-      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, published, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, published, created_at, updated_at, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, now, now)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, now, now, input.published ? now : null)
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
@@ -491,10 +499,11 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title), id);
   await d1
     .prepare(
-      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, published = ?, updated_at = ?
+      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, published = ?, updated_at = ?,
+         published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, ?) ELSE published_at END
        WHERE id = ?`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, new Date().toISOString(), id)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
   await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
 }

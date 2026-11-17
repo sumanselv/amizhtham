@@ -63,7 +63,7 @@ export default async function RemedyPage({ params }: Props) {
       headline: post.title.slice(0, 110),
       description: post.description || plainExcerpt(post.content),
       image: [absoluteUrl(cover)],
-      datePublished: post.created_at,
+      datePublished: post.published_at ?? post.created_at,
       dateModified: post.updated_at,
       inLanguage: pLang,
       mainEntityOfPage: url,
@@ -115,7 +115,7 @@ export default async function RemedyPage({ params }: Props) {
             {tag.name}
           </Link>
         ))}
-        <span className="text-sm text-[var(--muted)]">{formatPostDate(post.created_at, lang, locale)}</span>
+        <span className="text-sm text-[var(--muted)]">{formatPostDate(post.published_at ?? post.created_at, lang, locale)}</span>
       </div>
 
       {(authors.length > 0 || books.length > 0) && (

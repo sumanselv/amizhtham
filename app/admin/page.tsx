@@ -42,7 +42,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                       >
                         {post.published ? "Published" : "Draft"}
                       </span>
-                      <span>{formatDate(post.created_at)}</span>
+                      <span>{formatDate(post.published_at ?? post.created_at)}</span>
                       {post.tags.map((t) => (
                         <span key={t.id} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[var(--brand-dark)]">
                           {t.name}

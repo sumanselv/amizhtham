@@ -52,7 +52,7 @@ export default async function PostCard({ post, locale }: { post: PostWithTags; l
           <p lang={langOf(post.description)} className="line-clamp-4 text-sm leading-6 text-slate-700">{post.description}</p>
         )}
 
-        <p className="text-xs text-slate-600">{formatPostDate(post.created_at, lang, locale ?? "ta-IN")}</p>
+        <p className="text-xs text-slate-600">{formatPostDate(post.published_at ?? post.created_at, lang, locale ?? "ta-IN")}</p>
       </div>
     </article>
   );
