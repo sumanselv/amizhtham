@@ -63,10 +63,10 @@ export function tamilDate(iso: string): { month: string; day: number; year: stri
   return { month: TAMIL_MONTHS[sign], day, year: tamilYearName(startYear) };
 }
 
-/** Date stamp for a post. On Tamil pages the Tamil year, month and day are added: "17 நவ., 2026 · பராபவ ஆண்டு, கார்த்திகை 1". Other languages show the plain date. */
+/** Date stamp for a post. On Tamil pages the date is the Tamil date only: "பராபவ ஆண்டு, கார்த்திகை 1". Other languages show the plain date. */
 export function formatPostDate(iso: string, lang: string, locale: string): string {
   const plain = formatDate(iso, locale);
   if (lang !== "ta" || !plain) return plain;
   const t = tamilDate(iso);
-  return t ? `${plain} · ${t.year} ஆண்டு, ${t.month} ${t.day}` : plain;
+  return t ? `${t.year} ஆண்டு, ${t.month} ${t.day}` : plain;
 }
