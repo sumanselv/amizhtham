@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
-import { formatDate, isPeopleSection, langOf, tagHref } from "@/lib/slug";
-import { getPrefix, withPrefix } from "@/lib/i18n";
+import { isPeopleSection, langOf, tagHref } from "@/lib/slug";
+import { formatPostDate } from "@/lib/tamilcal";
+import { getLang, getPrefix, withPrefix } from "@/lib/i18n";
 
 export function coverUrl(key: string | null): string | null {
   return key ? `/img/${encodeURIComponent(key)}` : null;
@@ -10,6 +11,7 @@ export function coverUrl(key: string | null): string | null {
 export default async function PostCard({ post, locale }: { post: PostWithTags; locale?: string }) {
   const cover = coverUrl(post.cover_image);
   const prefix = await getPrefix();
+  const lang = await getLang();
   const tags = post.tags.filter((t) => !isPeopleSection(t.section)); // authors and books are not tags
 
   return (
@@ -50,7 +52,7 @@ export default async function PostCard({ post, locale }: { post: PostWithTags; l
           <p lang={langOf(post.description)} className="line-clamp-4 text-sm leading-6 text-slate-700">{post.description}</p>
         )}
 
-        <p className="text-xs text-slate-600">{formatDate(post.created_at, locale)}</p>
+        <p className="text-xs text-slate-600">{formatPostDate(post.created_at, lang, locale ?? "ta-IN")}</p>
       </div>
     </article>
   );

@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import PostCard, { coverUrl } from "@/components/PostCard";
 import { getPostBySlug, listRelatedPosts } from "@/lib/db";
 import { plainExcerpt, renderMarkdown } from "@/lib/markdown";
-import { decodeParam, formatDate, isPeopleSection, langOf, tagHref } from "@/lib/slug";
+import { decodeParam, isPeopleSection, langOf, tagHref } from "@/lib/slug";
+import { formatPostDate } from "@/lib/tamilcal";
 import { brandFor } from "@/lib/brand";
 import { getLang, getPrefix, languageOf, localizePost, localizePosts, withPrefix } from "@/lib/i18n";
 import { alternatesFor, pageUrl, shareMeta, absoluteUrl } from "@/lib/seo";
@@ -114,7 +115,7 @@ export default async function RemedyPage({ params }: Props) {
             {tag.name}
           </Link>
         ))}
-        <span className="text-sm text-[var(--muted)]">{formatDate(post.created_at, locale)}</span>
+        <span className="text-sm text-[var(--muted)]">{formatPostDate(post.created_at, lang, locale)}</span>
       </div>
 
       {(authors.length > 0 || books.length > 0) && (
