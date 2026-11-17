@@ -1,9 +1,8 @@
 import { savePostAction } from "@/app/admin/actions";
 import { coverUrl } from "@/components/PostCard";
-import type { PostWithTags } from "@/lib/db";
+import type { PostWithTags, Tag } from "@/lib/db";
 import { imagesEnabled } from "@/lib/env";
-import { isPlaceholderSlug, tagSlugFor } from "@/lib/db";
-import { slugify, AUTHOR_SECTION, BOOK_SECTION } from "@/lib/slug";
+import { KINDS, type KindKey } from "@/lib/slug";
 
 const NOTICES: Record<string, string> = {
   saved: "Saved. This post is a draft: it is stored in the database but NOT shown on the site until you click Publish.",
@@ -11,25 +10,10 @@ const NOTICES: Record<string, string> = {
   unpublished: "Unpublished. The post is saved as a draft and is no longer shown on the site.",
 };
 
-export default function PostForm({ post, error, notice, tagSuggestions }: { post?: PostWithTags; error?: string; notice?: string; tagSuggestions: string[] }) {
+export default function PostForm({ post, error, notice, entries }: { post?: PostWithTags; error?: string; notice?: string; entries: Tag[] }) {
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
   const live = post?.published === 1;
-  const HERB = "plant";
-  const CAUSE = "causes";
-  const inSection = (name: string) => post?.tags.filter((t) => t.section === name) ?? [];
-  // Tags from before Herbs and Causes existed (/tag/...): kept until they are moved into Herbs or Causes.
-  const otherTags = post?.tags.filter((t) => ![HERB, CAUSE, AUTHOR_SECTION, BOOK_SECTION].includes(t.section)) ?? [];
-  // "name" or "name | english-address" (the address is only written when it was chosen by hand).
-  const label = (t: { name: string; slug: string }) => {
-    const plain = tagSlugFor(t.name) === t.slug || isPlaceholderSlug(t.slug);
-    return plain ? t.name : `${t.name} | ${t.slug}`;
-  };
-  const join = (list: { name: string; slug: string }[]) => list.map(label).join(", ");
-  const herbsDefault = join(inSection(HERB));
-  const causesDefault = join(inSection(CAUSE));
-  const authorsDefault = join(inSection(AUTHOR_SECTION));
-  const booksDefault = join(inSection(BOOK_SECTION));
-  const otherDefault = join(otherTags);
+  const linked = new Set(post?.tags.map((t) => t.id) ?? []);
   return (
     <form action={savePostAction} encType="multipart/form-data" className="space-y-6">
       {post && <input type="hidden" name="id" value={post.id} />}
@@ -61,56 +45,44 @@ export default function PostForm({ post, error, notice, tagSuggestions }: { post
         <p className="mt-1 text-xs text-[var(--muted)]">The address stays in English: /remedy/this-name. If the title is in Tamil and this is empty, a code like remedy-k3f9x2 is used. Changing it later breaks old links.</p>
       </div>
 
+      {/* Herbs, causes, authors and books: pick the ones that belong to this post. Add them first on their own admin pages, or type a new one here. */}
       <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <label htmlFor="herbs" className="mb-1 block text-sm font-semibold">
-            Herbs <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
-          </label>
-          <input id="herbs" name="herbs" list="tag-list" defaultValue={herbsDefault} className="field" placeholder="அறுகம்புல் | scutch-grass, நெல்லிக்காய்" />
-        </div>
-        <div>
-          <label htmlFor="causes" className="mb-1 block text-sm font-semibold">
-            Causes <span className="font-normal text-[var(--muted)]">(comma separated, any language)</span>
-          </label>
-          <input id="causes" name="causes" list="tag-list" defaultValue={causesDefault} className="field" placeholder="இருமல் | cough, காய்ச்சல்" />
-        </div>
-        <p className="text-xs text-[var(--muted)] sm:col-span-2">
-          Type names in any language. The web address is made from the English meaning automatically: a herb gets <code>/plant/scutch-grass</code>, a cause gets <code>/causes/cough</code>.
-          To choose the English name yourself, add it after a bar, e.g. <code>கடலை மாவு | gram-flour</code>. You can change addresses later in Admin &gt; Tags.
-        </p>
-        <datalist id="tag-list">
-          {tagSuggestions.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
-      </div>
-
-      {otherTags.length > 0 && (
-        <div>
-          <label htmlFor="tags" className="mb-1 block text-sm font-semibold">
-            Other tags <span className="font-normal text-[var(--muted)]">(older tags)</span>
-          </label>
-          <input id="tags" name="tags" defaultValue={otherDefault} className="field" />
-          <p className="mt-1 text-xs text-[var(--muted)]">These tags were added before Herbs and Causes existed. Move each one into Herbs or Causes above (and delete it from here) to give it a <code>/plant/</code> or <code>/causes/</code> address. Left here, it stays as it is.</p>
-        </div>
-      )}
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <label htmlFor="authors" className="mb-1 block text-sm font-semibold">
-            Authors <span className="font-normal text-[var(--muted)]">(optional, comma separated)</span>
-          </label>
-          <input id="authors" name="authors" defaultValue={authorsDefault} className="field" placeholder="திருவள்ளுவர் | valluvar" />
-        </div>
-        <div>
-          <label htmlFor="books" className="mb-1 block text-sm font-semibold">
-            Books <span className="font-normal text-[var(--muted)]">(optional, comma separated)</span>
-          </label>
-          <input id="books" name="books" defaultValue={booksDefault} className="field" placeholder="திருக்குறள் | thirukkural" />
-        </div>
-        <p className="text-xs text-[var(--muted)] sm:col-span-2">
-          Each author and book is added as a tag with its own page: <code>/author/valluvar</code> and <code>/book/thirukkural</code>. Names are shown as written and are not translated.
-        </p>
+        {(Object.keys(KINDS) as KindKey[]).map((key) => {
+          const kind = KINDS[key];
+          const field = key === "herbs" ? "herb" : key === "causes" ? "cause" : key === "authors" ? "author" : "book";
+          const options = entries.filter((e) => e.section === kind.section);
+          return (
+            <fieldset key={key} className="rounded-xl border border-[var(--line)] p-4">
+              <legend className="px-1 text-sm font-semibold">{kind.many}</legend>
+              {options.length === 0 ? (
+                <p className="text-xs text-[var(--muted)]">
+                  No {kind.many.toLowerCase()} yet. Add one below, or on the <a href={`/admin/${key}`} className="underline">{kind.many}</a> page.
+                </p>
+              ) : (
+                <ul className="flex max-h-40 flex-col gap-1.5 overflow-y-auto">
+                  {options.map((o) => (
+                    <li key={o.id}>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input type="checkbox" name={field} value={o.id} defaultChecked={linked.has(o.id)} className="h-4 w-4" />
+                        <span>{o.name}</span>
+                        <span className="text-xs text-[var(--muted)]">/{o.section}/{o.slug}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                name={`${key}_new`}
+                aria-label={`Add new ${kind.one.toLowerCase()}`}
+                placeholder={`Add new: ${kind.example}`}
+                className="field mt-3"
+              />
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Optional. Type a new name (any language) and it is created and linked. Separate several with commas.
+              </p>
+            </fieldset>
+          );
+        })}
       </div>
 
       <div>

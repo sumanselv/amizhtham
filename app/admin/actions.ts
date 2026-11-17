@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
-import { createPost, createTag, deleteUnusedTag, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, listAllTags, updatePost, updateTag, type PostInput } from "@/lib/db";
+import { createPost, createTag, deleteTag, listTagsBySection, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { translateMany, warmPost } from "@/lib/i18n";
-import { AUTHOR_SECTION, BOOK_SECTION, CAUSE_SECTION, HERB_SECTION, randomCode, cleanSection, parseTagInput, slugify, type TagInput } from "@/lib/slug";
+import { AUTHOR_SECTION, BOOK_SECTION, CAUSE_SECTION, HERB_SECTION, KINDS, isKind, randomCode, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -99,28 +99,21 @@ export async function savePostAction(formData: FormData): Promise<void> {
   // Three buttons: "save" keeps the current state (a new post stays a draft), "publish" shows it on the site, "unpublish" hides it again.
   const rawIntent = String(formData.get("intent") ?? "save");
   const intent = rawIntent === "publish" || rawIntent === "unpublish" ? rawIntent : "save";
-  // Herbs (/plant/...), Causes (/causes/...), Authors (/author/...) and Books (/book/...): each name gets its own address section.
+  // Herbs, causes, authors and books: pick existing ones from the lists, and/or type new names to create them on the spot.
   const asSection = (raw: string, section: string): TagInput[] => parseTagInput(raw).map((t) => ({ ...t, section }));
+  const tagIds = ["herb", "cause", "author", "book"]
+    .flatMap((k) => formData.getAll(k))
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n > 0);
   const tags = await withEnglishAddresses([
-    ...asSection(String(formData.get("herbs") ?? ""), HERB_SECTION),
-    ...asSection(String(formData.get("causes") ?? ""), CAUSE_SECTION),
-    ...parseTagInput(String(formData.get("tags") ?? "")), // older tags, kept as they are
-    ...asSection(String(formData.get("authors") ?? ""), AUTHOR_SECTION),
-    ...asSection(String(formData.get("books") ?? ""), BOOK_SECTION),
+    ...asSection(String(formData.get("herbs_new") ?? ""), HERB_SECTION),
+    ...asSection(String(formData.get("causes_new") ?? ""), CAUSE_SECTION),
+    ...asSection(String(formData.get("authors_new") ?? ""), AUTHOR_SECTION),
+    ...asSection(String(formData.get("books_new") ?? ""), BOOK_SECTION),
   ]);
   const poemNote = String(formData.get("poem_note") ?? "").replace(/\r\n?/g, "\n").trim();
   const poem = String(formData.get("poem") ?? "").replace(/\r\n?/g, "\n").trim();
   const poet = String(formData.get("poet") ?? "").trim();
-  // Category: empty keeps tag addresses as /tag/name; "fruit" makes them /fruit/name.
-  const rawCategory = String(formData.get("category") ?? "").trim();
-  let category = "";
-  if (rawCategory) {
-    if (!slugify(rawCategory)) redirect(`${backTo}?error=${encodeURIComponent("Category must use English letters or numbers, e.g. fruit.")}`);
-    const cleaned = cleanSection(rawCategory);
-    if (cleaned === null) redirect(`${backTo}?error=${encodeURIComponent(`"${rawCategory}" is used by the site itself. Choose another category name.`)}`);
-    category = cleaned;
-  }
-
   if (!title) redirect(`${backTo}?error=${encodeURIComponent("Title is required.")}`);
   if (title.length > 150) redirect(`${backTo}?error=${encodeURIComponent("Title is too long (max 150 characters).")}`);
   if (description.length > 300) redirect(`${backTo}?error=${encodeURIComponent("Description is too long (max 300 characters).")}`);
@@ -158,7 +151,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
   }
 
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, category, poem, poet, poet_image: poetImage, poem_note: poemNote };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote };
 
   let postId = id;
   if (id) {
@@ -195,61 +188,52 @@ export async function deletePostAction(formData: FormData): Promise<void> {
 
 /* ------------------------------ tags ------------------------------ */
 
-/** Add a tag by itself, without a post. */
-export async function addTagAction(formData: FormData): Promise<void> {
+/** Add a herb, cause, author or book on its own (no post needed). */
+export async function addEntryAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
-  const rawSlug = String(formData.get("slug") ?? "").trim();
-  const rawSection = String(formData.get("section") ?? "").trim();
-  const fail = (msg: string): never => redirect(`/admin/tags?error=${encodeURIComponent(msg)}`);
+  const kindRaw = String(formData.get("kind") ?? "");
+  if (!isKind(kindRaw)) redirect("/admin");
+  const kind = KINDS[kindRaw];
+  const back = `/admin/${kindRaw}`;
+  const fail = (msg: string): never => redirect(`${back}?error=${encodeURIComponent(msg)}`);
 
-  if (!name) fail("Type a tag name.");
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+  const rawSlug = String(formData.get("slug") ?? "").trim();
+  if (!name) fail("Type a name.");
   if (rawSlug && !slugify(rawSlug)) fail("The English address must use English letters or numbers, e.g. amla.");
-  const section = cleanSection(rawSection);
-  if (section === null) fail(`"${rawSection}" is used by the site itself. Choose another section name.`);
 
   // English address: typed, taken from the name, or translated from its meaning.
   const [input] = await withEnglishAddresses([rawSlug ? { name, slug: slugify(rawSlug) } : { name }]);
   const slug = input.slug || tagSlugFor(name) || `tag-${randomCode()}`;
 
-  const result = await createTag(name, slug, section as string);
-  if (result === "exists") fail(`A tag named "${name}" or with the address "${slug}" already exists.`);
-  redirect(`/admin/tags?added=${encodeURIComponent(name)}`);
+  const result = await createTag(name, slug, kind.section);
+  if (result === "exists") fail(`"${name}" or the address "${slug}" already exists.`);
+  redirect(`${back}?added=${encodeURIComponent(name)}`);
 }
 
-/** Save tag names (any language) and their English web addresses. */
-export async function saveTagNamesAction(formData: FormData): Promise<void> {
+/** Save the names and English addresses of one kind of entry, and delete the ones that are ticked. */
+export async function saveEntriesAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const tags = await listAllTags();
+  const kindRaw = String(formData.get("kind") ?? "");
+  if (!isKind(kindRaw)) redirect("/admin");
+  const back = `/admin/${kindRaw}`;
+  const entries = await listTagsBySection(KINDS[kindRaw].section);
   const taken: string[] = [];
-  const reserved: string[] = [];
-  for (const tag of tags) {
-    if (formData.get(`del_${tag.id}`) === "on" && !tag.post_count) {
-      await deleteUnusedTag(tag.id);
+  for (const entry of entries) {
+    if (formData.get(`del_${entry.id}`) === "on") {
+      await deleteTag(entry.id);
       continue;
     }
-    const rawName = formData.get(`tag_${tag.id}`);
-    const rawSlug = formData.get(`slug_${tag.id}`);
+    const rawName = formData.get(`name_${entry.id}`);
+    const rawSlug = formData.get(`slug_${entry.id}`);
     if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
-    const name = rawName.trim().replace(/\s+/g, " ").slice(0, 40) || tag.name;
-    const slug = slugify(rawSlug) || tag.slug;
-    const rawSection = formData.get(`section_${tag.id}`);
-    let section = tag.section;
-    if (typeof rawSection === "string") {
-      const cleaned = cleanSection(rawSection);
-      if (cleaned === null) reserved.push(rawSection.trim());
-      else section = cleaned;
-    }
-    if (name === tag.name && slug === tag.slug && section === tag.section) continue;
-    if ((await updateTag(tag.id, name, slug, section)) === "slug-taken") taken.push(slug);
+    const name = rawName.trim().replace(/\s+/g, " ").slice(0, 60) || entry.name;
+    const slug = slugify(rawSlug) || entry.slug;
+    if (name === entry.name && slug === entry.slug) continue;
+    if ((await updateTag(entry.id, name, slug, entry.section)) === "slug-taken") taken.push(slug);
   }
-  if (reserved.length) {
-    redirect(`/admin/tags?error=${encodeURIComponent(`These sections are used by the site itself, choose another: ${reserved.join(", ")}`)}`);
-  }
-  if (taken.length) {
-    redirect(`/admin/tags?error=${encodeURIComponent(`These addresses are already used by another tag: ${taken.join(", ")}`)}`);
-  }
-  redirect("/admin/tags?saved=1");
+  if (taken.length) redirect(`${back}?error=${encodeURIComponent(`These addresses are already used: ${taken.join(", ")}`)}`);
+  redirect(`${back}?saved=1`);
 }
 
 /* ------------------------------ contact messages ------------------------------ */

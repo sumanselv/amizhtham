@@ -40,6 +40,18 @@ export const CAUSE_SECTION = "causes";
 export const AUTHOR_SECTION = "author";
 export const BOOK_SECTION = "book";
 
+/** The four kinds of entry the admin manages. Each has its own admin page, its own address section and its own add function. */
+export const KINDS = {
+  herbs: { section: HERB_SECTION, one: "Herb", many: "Herbs", example: "அறுகம்புல் | scutch-grass", url: "/plant/scutch-grass", hint: "A plant or ingredient, e.g. scutch grass, amla, ginger." },
+  causes: { section: CAUSE_SECTION, one: "Cause", many: "Causes", example: "இருமல் | cough", url: "/causes/cough", hint: "The problem a remedy helps with, e.g. cough, fever, headache." },
+  authors: { section: AUTHOR_SECTION, one: "Author", many: "Authors", example: "திருவள்ளுவர் | valluvar", url: "/author/valluvar", hint: "The writer or poet of a verse. Names are shown as written, never translated." },
+  books: { section: BOOK_SECTION, one: "Book", many: "Books", example: "திருக்குறள் | thirukkural", url: "/book/thirukkural", hint: "The book a verse comes from. Names are shown as written, never translated." },
+} as const;
+export type KindKey = keyof typeof KINDS;
+export function isKind(k: string): k is KindKey {
+  return Object.prototype.hasOwnProperty.call(KINDS, k);
+}
+
 /** Authors and books are not tags: they are shown as "Author" and "Book" lines, never as tag chips or in tag lists. */
 export function isPeopleSection(section: string | undefined): boolean {
   return section === AUTHOR_SECTION || section === BOOK_SECTION;

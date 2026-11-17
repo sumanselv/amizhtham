@@ -88,7 +88,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "5";
+const SCHEMA_VERSION = "6";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -124,6 +124,8 @@ async function init(): Promise<D1Like> {
   if (!cols.results.some((c) => c.name === "kept")) {
     await d1.prepare("ALTER TABLE tags ADD COLUMN kept INTEGER NOT NULL DEFAULT 0").run();
   }
+  // Herbs, causes, authors and books are managed entries: they stay even when no post uses them.
+  await d1.prepare("UPDATE tags SET kept = 1 WHERE section IN ('plant', 'causes', 'author', 'book')").run();
   const seeded = await d1.prepare("SELECT value FROM meta WHERE key = 'seeded'").first();
   if (!seeded) {
     await d1.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('seeded', '1')").run();
@@ -305,6 +307,35 @@ export async function listBooksByAuthor(authorSlug: string): Promise<Tag[]> {
   return rows.results;
 }
 
+/** Entries of one kind (a section) with the number of posts that use each. */
+export async function listTagsBySection(section: string): Promise<Tag[]> {
+  const d1 = await db();
+  const rows = await d1
+    .prepare(
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, COUNT(pt.post_id) AS post_count
+       FROM tags t LEFT JOIN post_tags pt ON pt.tag_id = t.id WHERE t.section = ? GROUP BY t.id ORDER BY t.name`,
+    )
+    .bind(section)
+    .all<Tag>();
+  return rows.results;
+}
+
+/** All herbs, causes, authors and books, for the pickers in the post form. */
+export async function listEntries(): Promise<Tag[]> {
+  const d1 = await db();
+  const rows = await d1
+    .prepare("SELECT id, name, slug, section FROM tags WHERE section IN ('plant', 'causes', 'author', 'book') ORDER BY name")
+    .all<Tag>();
+  return rows.results;
+}
+
+/** Delete an entry everywhere (it is also removed from the posts that use it). */
+export async function deleteTag(id: number): Promise<void> {
+  const d1 = await db();
+  await d1.prepare("DELETE FROM post_tags WHERE tag_id = ?").bind(id).run();
+  await d1.prepare("DELETE FROM tags WHERE id = ?").bind(id).run();
+}
+
 export async function listAllTagNames(): Promise<string[]> {
   const d1 = await db();
   const rows = await d1.prepare("SELECT name FROM tags ORDER BY name").all<{ name: string }>();
@@ -375,8 +406,12 @@ export async function getTagByName(name: string): Promise<Tag | null> {
 }
 
 /** Save a post's tags. A non-empty `category` becomes the address section of those tags (/category/tag-name); empty leaves them as they are. */
-async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], category = ""): Promise<void> {
+async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], category = "", tagIds: number[] = []): Promise<void> {
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(postId).run();
+  // Entries picked from the lists in the post form.
+  for (const tagId of new Set(tagIds)) {
+    await d1.prepare("INSERT OR IGNORE INTO post_tags (post_id, tag_id) SELECT ?, id FROM tags WHERE id = ?").bind(postId, tagId).run();
+  }
   for (const input of tags) {
     const name = input.name;
     const english = tagSlugFor(name, input.slug);
@@ -398,7 +433,7 @@ async function setPostTags(d1: D1Like, postId: number, tags: TagInput[], categor
       if (tag) {
         if (renameOnMatch) await d1.prepare("UPDATE tags SET name = ? WHERE id = ?").bind(name, tag.id).run();
       } else {
-        await d1.prepare("INSERT INTO tags (name, slug) VALUES (?, ?)").bind(name, slug).run();
+        await d1.prepare("INSERT INTO tags (name, slug, section, kept) VALUES (?, ?, ?, 1)").bind(name, slug, input.section || category || "tag").run();
         tag = await d1.prepare("SELECT id FROM tags WHERE slug = ?").bind(slug).first<{ id: number }>();
       }
     }
@@ -424,6 +459,8 @@ export interface PostInput {
   tags: TagInput[];
   /** Address section for this post's tags, e.g. "fruit" gives /fruit/amla. Empty keeps the current section ("tag" for new tags). */
   category?: string;
+  /** Ids of existing herbs / causes / authors / books chosen in the form. */
+  tag_ids?: number[];
   poem?: string;
   poet?: string;
   poet_image?: string | null;
@@ -443,7 +480,7 @@ export async function createPost(input: PostInput): Promise<number> {
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
-  await setPostTags(d1, id, input.tags, input.category);
+  await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
   return id;
 }
 
@@ -457,7 +494,7 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
     )
     .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
-  await setPostTags(d1, id, input.tags, input.category);
+  await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
 }
 
 /** Deletes a post and returns its image keys (cover and poet) so unused files can be cleaned up. */
