@@ -157,8 +157,6 @@ export default async function RemedyPage({ params }: Props) {
         </div>
       )}
 
-      <div lang={langOf(post.title + post.content)} className="post-body mt-5 sm:mt-6" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
-
       {(post.poem || post.poet || post.poet_image) && (
         // Only the poem (and its poet) is highlighted.
         <section className="mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
@@ -190,6 +188,8 @@ export default async function RemedyPage({ params }: Props) {
           {post.poem_note}
         </p>
       )}
+
+      <div lang={langOf(post.title + post.content)} className="post-body mt-8 sm:mt-10" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
 
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
