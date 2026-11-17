@@ -34,15 +34,15 @@ export function langOf(text: string): string {
 }
 
 /** Address sections used for the Authors and Books inputs of a post (/author/valluvar, /book/thirukkural). */
-/** Herbs and causes are the two kinds of tag: /plant/scutch-grass and /causes/cough. */
-export const HERB_SECTION = "plant";
+/** Herbs and causes are the two kinds of tag: /herbs/scutch-grass and /causes/cough. */
+export const HERB_SECTION = "herbs";
 export const CAUSE_SECTION = "causes";
 export const AUTHOR_SECTION = "author";
 export const BOOK_SECTION = "book";
 
 /** The four kinds of entry the admin manages. Each has its own admin page, its own address section and its own add function. */
 export const KINDS = {
-  herbs: { section: HERB_SECTION, one: "Herb", many: "Herbs", example: "அறுகம்புல் | scutch-grass", url: "/plant/scutch-grass", hint: "A plant or ingredient, e.g. scutch grass, amla, ginger." },
+  herbs: { section: HERB_SECTION, one: "Herb", many: "Herbs", example: "அறுகம்புல் | scutch-grass", url: "/herbs/scutch-grass", hint: "A plant or ingredient, e.g. scutch grass, amla, ginger." },
   causes: { section: CAUSE_SECTION, one: "Cause", many: "Causes", example: "இருமல் | cough", url: "/causes/cough", hint: "The problem a remedy helps with, e.g. cough, fever, headache." },
   authors: { section: AUTHOR_SECTION, one: "Author", many: "Authors", example: "திருவள்ளுவர் | valluvar", url: "/author/valluvar", hint: "The writer or poet of a verse. Names are shown as written, never translated." },
   books: { section: BOOK_SECTION, one: "Book", many: "Books", example: "திருக்குறள் | thirukkural", url: "/book/thirukkural", hint: "The book a verse comes from. Names are shown as written, never translated." },
@@ -97,7 +97,7 @@ export interface TagInput {
 /**
  * Parse "Amla, நெல்லிக்காய் | amla, Honey" into unique tags (max 8).
  * A tag can be written in any language; "name | english-url" sets its English address,
- * and "name | type/english-url" also sets its type (address section), e.g. "அறுகம்புல் | plant/scutch-grass" or "இருமல் | causes/cough".
+ * and "name | type/english-url" also sets its type (address section), e.g. "அறுகம்புல் | herbs/scutch-grass" or "இருமல் | causes/cough".
  */
 export function parseTagInput(raw: string): TagInput[] {
   const seen = new Set<string>();

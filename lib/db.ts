@@ -88,7 +88,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "6";
+const SCHEMA_VERSION = "7";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -124,8 +124,10 @@ async function init(): Promise<D1Like> {
   if (!cols.results.some((c) => c.name === "kept")) {
     await d1.prepare("ALTER TABLE tags ADD COLUMN kept INTEGER NOT NULL DEFAULT 0").run();
   }
+  // Herb addresses moved from /plant/... to /herbs/... (the old address redirects).
+  await d1.prepare("UPDATE tags SET section = 'herbs' WHERE section = 'plant'").run();
   // Herbs, causes, authors and books are managed entries: they stay even when no post uses them.
-  await d1.prepare("UPDATE tags SET kept = 1 WHERE section IN ('plant', 'causes', 'author', 'book')").run();
+  await d1.prepare("UPDATE tags SET kept = 1 WHERE section IN ('herbs', 'causes', 'author', 'book')").run();
   const seeded = await d1.prepare("SELECT value FROM meta WHERE key = 'seeded'").first();
   if (!seeded) {
     await d1.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('seeded', '1')").run();
@@ -324,7 +326,7 @@ export async function listTagsBySection(section: string): Promise<Tag[]> {
 export async function listEntries(): Promise<Tag[]> {
   const d1 = await db();
   const rows = await d1
-    .prepare("SELECT id, name, slug, section FROM tags WHERE section IN ('plant', 'causes', 'author', 'book') ORDER BY name")
+    .prepare("SELECT id, name, slug, section FROM tags WHERE section IN ('herbs', 'causes', 'author', 'book') ORDER BY name")
     .all<Tag>();
   return rows.results;
 }

@@ -64,7 +64,7 @@ async function removeImageIfUnused(key: string | null, exceptPostId?: number): P
 
 /* ------------------------------ posts ------------------------------ */
 
-/** Tags written in another language get an English web address from their English meaning (e.g. அறுகம்புல் -> /plant/scutch-grass), not a random code. */
+/** Tags written in another language get an English web address from their English meaning (e.g. அறுகம்புல் -> /herbs/scutch-grass), not a random code. */
 async function withEnglishAddresses(tags: TagInput[]): Promise<TagInput[]> {
   const out: TagInput[] = [];
   for (const t of tags) {

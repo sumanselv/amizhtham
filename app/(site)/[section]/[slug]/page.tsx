@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
 import { PAGE_SIZE, getTagBySlug, listBooksByAuthor, listPosts } from "@/lib/db";
@@ -40,7 +40,7 @@ export default async function TagPage({ params, searchParams }: Props) {
   const rawTag = await getTagBySlug(decodeParam(slug));
   if (!rawTag) notFound();
   // Old or mistyped prefix (e.g. /tag/amla after it moved to /fruit/amla): go to the current address.
-  if (decodeParam(section) !== rawTag.section) redirect(withPrefix(await getPrefix(), tagHref(rawTag)) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
+  if (decodeParam(section) !== rawTag.section) permanentRedirect(withPrefix(await getPrefix(), tagHref(rawTag)) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
 
   const lang = await getLang();
   const prefix = await getPrefix();
