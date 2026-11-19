@@ -262,6 +262,23 @@ export const listTags = cache(async (): Promise<Tag[]> => {
   return rows.results;
 });
 
+/** Tags of one section (herbs or causes) that have at least one published post, with counts. */
+export const listTagsInSection = cache(async (section: string): Promise<Tag[]> => {
+  const d1 = await db();
+  const rows = await d1
+    .prepare(
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, COUNT(p.id) AS post_count
+       FROM tags t
+       JOIN post_tags pt ON pt.tag_id = t.id
+       JOIN posts p ON p.id = pt.post_id AND p.published = 1
+       WHERE t.section = ?
+       GROUP BY t.id ORDER BY t.name`,
+    )
+    .bind(section)
+    .all<Tag>();
+  return rows.results;
+});
+
 /** Every tag (including ones only used by drafts) for the admin rename page. */
 export async function listAllTags(): Promise<Tag[]> {
   const d1 = await db();
