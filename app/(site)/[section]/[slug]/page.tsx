@@ -4,7 +4,8 @@ import JsonLd from "@/components/JsonLd";
 import { notFound, permanentRedirect } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
-import { PAGE_SIZE, getTagBySlug, listBooksByAuthor, listPosts } from "@/lib/db";
+import PostView, { postMetadata } from "@/components/PostView";
+import { PAGE_SIZE, getHerbPropertiesPost, getTagBySlug, listBooksByAuthor, listPosts } from "@/lib/db";
 import { decodeParam, langOf, tagHref } from "@/lib/slug";
 import { brandFor } from "@/lib/brand";
 import { getLang, getPrefix, languageOf, localizePosts, localizeTags, withPrefix } from "@/lib/i18n";
@@ -22,6 +23,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const lang = await getLang();
   const ui = await getUi(lang);
   if (!rawTag) return { title: ui.notFound };
+  // A herb with its own medicinal-properties post shows that post at this address.
+  if (rawTag.section === "herbs") {
+    const own = await getHerbPropertiesPost(rawTag.id);
+    if (own) return postMetadata(own, tagHref(rawTag));
+  }
   const [tag] = await localizeTags(lang, [rawTag]);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const alternates = alternatesFor(lang, tagHref(rawTag), page > 1 ? `?page=${page}` : "");
@@ -41,6 +47,11 @@ export default async function TagPage({ params, searchParams }: Props) {
   if (!rawTag) notFound();
   // Old or mistyped prefix (e.g. /tag/amla after it moved to /fruit/amla): go to the current address.
   if (decodeParam(section) !== rawTag.section) permanentRedirect(withPrefix(await getPrefix(), tagHref(rawTag)) + (sp.page ? `?page=${encodeURIComponent(sp.page)}` : ""));
+
+  if (rawTag.section === "herbs") {
+    const own = await getHerbPropertiesPost(rawTag.id);
+    if (own) return <PostView raw={own} path={tagHref(rawTag)} />;
+  }
 
   const lang = await getLang();
   const prefix = await getPrefix();

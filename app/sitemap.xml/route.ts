@@ -30,7 +30,7 @@ export async function GET() {
     ...entry("/books"),
     ...entry("/contact"),
     ...tags.flatMap((t) => [...entry(tagHref(t)), ...(t.section === "author" ? entry(`${tagHref(t)}/books`) : [])]),
-    ...posts.flatMap((p) => entry(`/remedy/${encodeURIComponent(p.slug)}`, p.updated_at.slice(0, 10))),
+    ...posts.flatMap((p) => (p.herb_slug ? [] : entry(`/remedy/${encodeURIComponent(p.slug)}`, p.updated_at.slice(0, 10)))),
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;

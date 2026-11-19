@@ -35,6 +35,11 @@ export function langOf(text: string): string {
 
 /** Address sections used for the Authors and Books inputs of a post (/author/valluvar, /book/thirukkural). */
 /** Herbs and causes are the two kinds of tag: /herbs/scutch-grass and /causes/cough. */
+/** Public address of a post: /remedy/<slug>, or /herbs/<herb> when it is that herb's medicinal-properties page. */
+export function postPath(post: { slug: string; herb_slug?: string | null }): string {
+  return post.herb_slug ? `/herbs/${encodeURIComponent(post.herb_slug)}` : `/remedy/${encodeURIComponent(post.slug)}`;
+}
+
 export const HERB_SECTION = "herbs";
 export const CAUSE_SECTION = "causes";
 export const AUTHOR_SECTION = "author";

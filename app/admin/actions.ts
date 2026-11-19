@@ -105,6 +105,9 @@ export async function savePostAction(formData: FormData): Promise<void> {
     .flatMap((k) => formData.getAll(k))
     .map((v) => Number(v))
     .filter((n) => Number.isInteger(n) && n > 0);
+  const pageHerb = Number(formData.get("page_herb"));
+  const pageHerbId = Number.isInteger(pageHerb) && pageHerb > 0 ? pageHerb : null;
+  if (pageHerbId && !tagIds.includes(pageHerbId)) tagIds.push(pageHerbId);
   const tags = await withEnglishAddresses([
     ...asSection(String(formData.get("herbs_new") ?? ""), HERB_SECTION),
     ...asSection(String(formData.get("causes_new") ?? ""), CAUSE_SECTION),
@@ -152,7 +155,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
   }
 
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote, poem_page: poemPage };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote, poem_page: poemPage, page_herb_id: pageHerbId };
 
   let postId = id;
   if (id) {

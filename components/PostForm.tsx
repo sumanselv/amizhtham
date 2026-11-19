@@ -45,6 +45,24 @@ export default function PostForm({ post, error, notice, entries }: { post?: Post
         <p className="mt-1 text-xs text-[var(--muted)]">The address stays in English: /remedy/this-name. If the title is in Tamil and this is empty, a code like remedy-k3f9x2 is used. Changing it later breaks old links.</p>
       </div>
 
+      {/* A herb's "medicinal properties" post lives at /herbs/<herb> (not /remedy/...). */}
+      <div>
+        <label htmlFor="page_herb" className="mb-1 block text-sm font-semibold">
+          Medicinal-properties page of a herb <span className="font-normal text-[var(--muted)]">(optional)</span>
+        </label>
+        <select id="page_herb" name="page_herb" defaultValue={post?.herb_page ?? ""} className="field">
+          <option value="">No: an ordinary remedy post (/remedy/...)</option>
+          {entries
+            .filter((e) => e.section === "herbs")
+            .map((e) => (
+              <option key={e.id} value={e.id}>
+                Yes: this is the page of {e.name} (/herbs/{e.slug})
+              </option>
+            ))}
+        </select>
+        <p className="mt-1 text-xs text-[var(--muted)]">The post then opens at the herb&apos;s own address and replaces that herb&apos;s list of posts. Only one post can be a herb&apos;s page; the old /remedy/ address redirects.</p>
+      </div>
+
       {/* Herbs, causes, authors and books: pick the ones that belong to this post. Add them first on their own admin pages, or type a new one here. */}
       <div className="grid gap-6 sm:grid-cols-2">
         {(Object.keys(KINDS) as KindKey[]).map((key) => {

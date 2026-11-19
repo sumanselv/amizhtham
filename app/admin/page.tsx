@@ -4,7 +4,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { deletePostAction } from "./actions";
 import { requireAdmin } from "@/lib/auth";
 import { listPosts } from "@/lib/db";
-import { formatDate } from "@/lib/slug";
+import { formatDate, postPath } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   </div>
                   <div className="flex items-center gap-2">
                     {post.published === 1 && (
-                      <Link href={`/remedy/${encodeURIComponent(post.slug)}`} target="_blank" className="btn btn-ghost">
+                      <Link href={postPath(post)} target="_blank" className="btn btn-ghost">
                         View
                       </Link>
                     )}

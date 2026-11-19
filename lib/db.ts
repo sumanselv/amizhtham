@@ -31,6 +31,10 @@ export interface Post {
   poem_note: string;
   /** Page number of the poem in its book (optional, shown under the poem). */
   poem_page: string;
+  /** Id of the herb whose "medicinal properties" page this post is. The post then lives at /herbs/<herb> instead of /remedy/<slug>. */
+  herb_page: number | null;
+  /** Address of that herb (filled in by the queries). */
+  herb_slug?: string | null;
   published: number;
   created_at: string;
   updated_at: string;
@@ -94,7 +98,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "10";
+const SCHEMA_VERSION = "11";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -115,6 +119,9 @@ async function init(): Promise<D1Like> {
   const postCols = await d1.prepare("PRAGMA table_info(posts)").all<{ name: string }>();
   if (!postCols.results.some((c) => c.name === "poet_image")) {
     await d1.prepare("ALTER TABLE posts ADD COLUMN poet_image TEXT").run();
+  }
+  if (!postCols.results.some((c) => c.name === "herb_page")) {
+    await d1.prepare("ALTER TABLE posts ADD COLUMN herb_page INTEGER").run();
   }
   for (const col of ["poem", "poet", "poem_note", "poem_page"]) {
     if (!postCols.results.some((c) => c.name === col)) {
@@ -156,9 +163,10 @@ async function init(): Promise<D1Like> {
 /* ------------------------------ reading ------------------------------ */
 
 /** Columns a post card needs. The long text (body, poem, explanation) is only loaded for the post page. */
-const CARD_COLS = "p.id, p.title, p.slug, p.description, p.cover_image, p.published, p.created_at, p.updated_at, p.published_at";
+const HERB_SLUG_SQL = "(SELECT h.slug FROM tags h WHERE h.id = p.herb_page) AS herb_slug";
+const CARD_COLS = `p.id, p.title, p.slug, p.description, p.cover_image, p.published, p.created_at, p.updated_at, p.published_at, p.herb_page, ${HERB_SLUG_SQL}`;
 
-type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at" | "published_at">;
+type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at" | "published_at" | "herb_page" | "herb_slug">;
 
 function fullPost(r: CardRow | Post): Post {
   return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", poem_page: "", ...r };
@@ -202,7 +210,7 @@ export async function listPosts(opts: {
       .bind(...params)
       .first<{ n: number }>(),
     d1
-      .prepare(`SELECT DISTINCT ${opts.withContent ? "p.*" : CARD_COLS} ${base} ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT ? OFFSET ?`)
+      .prepare(`SELECT DISTINCT ${opts.withContent ? `p.*, ${HERB_SLUG_SQL}` : CARD_COLS} ${base} ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT ? OFFSET ?`)
       .bind(...params, pageSize, (page - 1) * pageSize)
       .all<CardRow>(),
   ]);
@@ -234,8 +242,19 @@ async function attachTags(d1: D1Like, posts: Post[]): Promise<PostWithTags[]> {
 export const getPostBySlug = cache(async (slug: string, includeDrafts = false): Promise<PostWithTags | null> => {
   const d1 = await db();
   const row = await d1
-    .prepare(`SELECT * FROM posts WHERE slug = ? ${includeDrafts ? "" : "AND published = 1"}`)
+    .prepare(`SELECT p.*, ${HERB_SLUG_SQL} FROM posts p WHERE p.slug = ? ${includeDrafts ? "" : "AND p.published = 1"}`)
     .bind(slug)
+    .first<Post>();
+  if (!row) return null;
+  return (await attachTags(d1, [row]))[0];
+});
+
+/** The published "medicinal properties" post of a herb, if the admin made one. It is shown at /herbs/<herb>. */
+export const getHerbPropertiesPost = cache(async (herbId: number): Promise<PostWithTags | null> => {
+  const d1 = await db();
+  const row = await d1
+    .prepare(`SELECT p.*, ${HERB_SLUG_SQL} FROM posts p WHERE p.herb_page = ? AND p.published = 1 ORDER BY p.id LIMIT 1`)
+    .bind(herbId)
     .first<Post>();
   if (!row) return null;
   return (await attachTags(d1, [row]))[0];
@@ -243,7 +262,7 @@ export const getPostBySlug = cache(async (slug: string, includeDrafts = false): 
 
 export async function getPostById(id: number): Promise<PostWithTags | null> {
   const d1 = await db();
-  const row = await d1.prepare("SELECT * FROM posts WHERE id = ?").bind(id).first<Post>();
+  const row = await d1.prepare(`SELECT p.*, ${HERB_SLUG_SQL} FROM posts p WHERE p.id = ?`).bind(id).first<Post>();
   if (!row) return null;
   return (await attachTags(d1, [row]))[0];
 }
@@ -393,11 +412,11 @@ export async function listRelatedPosts(post: PostWithTags, limit = 3): Promise<P
   return attachTags(d1, rows.results.map(fullPost));
 }
 
-export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; updated_at: string }[]; tags: { section: string; slug: string }[] }> {
+export async function listSlugsForSitemap(): Promise<{ posts: { slug: string; updated_at: string; herb_slug: string | null }[]; tags: { section: string; slug: string }[] }> {
   const d1 = await db();
   const posts = await d1
-    .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 ORDER BY created_at DESC")
-    .all<{ slug: string; updated_at: string }>();
+    .prepare(`SELECT p.slug, p.updated_at, ${HERB_SLUG_SQL} FROM posts p WHERE p.published = 1 ORDER BY p.created_at DESC`)
+    .all<{ slug: string; updated_at: string; herb_slug: string | null }>();
   // Every tag page, including author and book pages (they are not "tags" on the site, but they have pages).
   const tags = await d1
     .prepare(
@@ -500,6 +519,8 @@ export interface PostInput {
   poet_image?: string | null;
   poem_note?: string;
   poem_page?: string;
+  /** Herb id when this post is that herb's medicinal-properties page. */
+  page_herb_id?: number | null;
 }
 
 export async function createPost(input: PostInput): Promise<number> {
@@ -508,13 +529,14 @@ export async function createPost(input: PostInput): Promise<number> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title));
   await d1
     .prepare(
-      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, poem_page, published, created_at, updated_at, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, poem_page, herb_page, published, created_at, updated_at, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.published ? 1 : 0, now, now, input.published ? now : null)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, now, now, input.published ? now : null)
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
+  if (input.page_herb_id) await d1.prepare("UPDATE posts SET herb_page = NULL WHERE herb_page = ? AND id != ?").bind(input.page_herb_id, id).run();
   await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
   return id;
 }
@@ -524,12 +546,13 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title), id);
   await d1
     .prepare(
-      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, poem_page = ?, published = ?, updated_at = ?,
+      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, poem_page = ?, herb_page = ?, published = ?, updated_at = ?,
          published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, ?) ELSE published_at END
        WHERE id = ?`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
+  if (input.page_herb_id) await d1.prepare("UPDATE posts SET herb_page = NULL WHERE herb_page = ? AND id != ?").bind(input.page_herb_id, id).run();
   await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
 }
 

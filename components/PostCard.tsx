@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PostWithTags } from "@/lib/db";
-import { isPeopleSection, langOf, tagHref } from "@/lib/slug";
+import { isPeopleSection, langOf, tagHref, postPath } from "@/lib/slug";
 import { formatPostDate } from "@/lib/tamilcal";
 import { getLang, getPrefix, withPrefix } from "@/lib/i18n";
 
@@ -43,7 +43,7 @@ export default async function PostCard({ post, locale }: { post: PostWithTags; l
 
         {/* Title and description take the space they need (long ones are trimmed), so each card fits its own text. */}
         <h2 lang={langOf(post.title)} className="line-clamp-3 text-base font-bold leading-snug text-[var(--ink)] sm:text-lg">
-          <Link href={withPrefix(prefix, `/remedy/${encodeURIComponent(post.slug)}`)} className="after:absolute after:inset-0 after:content-['']">
+          <Link href={withPrefix(prefix, postPath(post))} className="after:absolute after:inset-0 after:content-['']">
             {post.title}
           </Link>
         </h2>
