@@ -27,6 +27,8 @@ export interface Post {
   poet_image: string | null;
   /** Explanation of the poem: translated like the post body. */
   poem_note: string;
+  /** Page number of the poem in its book (optional, shown under the poem). */
+  poem_page: string;
   published: number;
   created_at: string;
   updated_at: string;
@@ -90,7 +92,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "8";
+const SCHEMA_VERSION = "9";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -112,7 +114,7 @@ async function init(): Promise<D1Like> {
   if (!postCols.results.some((c) => c.name === "poet_image")) {
     await d1.prepare("ALTER TABLE posts ADD COLUMN poet_image TEXT").run();
   }
-  for (const col of ["poem", "poet", "poem_note"]) {
+  for (const col of ["poem", "poet", "poem_note", "poem_page"]) {
     if (!postCols.results.some((c) => c.name === col)) {
       await d1.prepare(`ALTER TABLE posts ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`).run();
     }
@@ -154,7 +156,7 @@ const CARD_COLS = "p.id, p.title, p.slug, p.description, p.cover_image, p.publis
 type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at" | "published_at">;
 
 function fullPost(r: CardRow | Post): Post {
-  return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", ...r };
+  return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", poem_page: "", ...r };
 }
 
 export async function listPosts(opts: {
@@ -492,6 +494,7 @@ export interface PostInput {
   poet?: string;
   poet_image?: string | null;
   poem_note?: string;
+  poem_page?: string;
 }
 
 export async function createPost(input: PostInput): Promise<number> {
@@ -500,10 +503,10 @@ export async function createPost(input: PostInput): Promise<number> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title));
   await d1
     .prepare(
-      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, published, created_at, updated_at, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, poem_page, published, created_at, updated_at, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, now, now, input.published ? now : null)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.published ? 1 : 0, now, now, input.published ? now : null)
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
@@ -516,11 +519,11 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title), id);
   await d1
     .prepare(
-      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, published = ?, updated_at = ?,
+      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, poem_page = ?, published = ?, updated_at = ?,
          published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, ?) ELSE published_at END
        WHERE id = ?`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
   await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
 }

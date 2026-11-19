@@ -180,6 +180,11 @@ export default async function RemedyPage({ params }: Props) {
               {post.poem}
             </blockquote>
           )}
+          {post.poem_page && (
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              <span lang={lang}>{ui.poemPage}</span> {post.poem_page}
+            </p>
+          )}
           {(post.poet || post.poet_image) && (
             <div translate="no" className={`notranslate flex items-center gap-3 ${post.poem ? "mt-4" : ""}`}>
               {post.poet_image && (

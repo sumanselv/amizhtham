@@ -121,6 +121,10 @@ export default function PostForm({ post, error, notice, entries }: { post?: Post
           Poem
         </label>
         <textarea id="poem" name="poem" rows={5} maxLength={3000} defaultValue={post?.poem} className="field italic" placeholder="One line per row, as it should appear" />
+        <label htmlFor="poem_page" className="mb-1 mt-3 block text-sm font-semibold">
+          Page no. <span className="font-normal text-[var(--muted)]">(optional, page of the poem in the book)</span>
+        </label>
+        <input id="poem_page" name="poem_page" maxLength={20} defaultValue={post?.poem_page} className="field max-w-[10rem]" placeholder="e.g. 42" inputMode="numeric" />
         <label htmlFor="poet" className="mb-1 mt-3 block text-sm font-semibold">
           Poet / author name <span className="font-normal text-[var(--muted)]">(never translated)</span>
         </label>

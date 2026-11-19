@@ -112,6 +112,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
     ...asSection(String(formData.get("books_new") ?? ""), BOOK_SECTION),
   ]);
   const poemNote = String(formData.get("poem_note") ?? "").replace(/\r\n?/g, "\n").trim();
+  const poemPage = String(formData.get("poem_page") ?? "").trim().slice(0, 20);
   const poem = String(formData.get("poem") ?? "").replace(/\r\n?/g, "\n").trim();
   const poet = String(formData.get("poet") ?? "").trim();
   if (!title) redirect(`${backTo}?error=${encodeURIComponent("Title is required.")}`);
@@ -151,7 +152,7 @@ export async function savePostAction(formData: FormData): Promise<void> {
   }
 
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote, poem_page: poemPage };
 
   let postId = id;
   if (id) {
