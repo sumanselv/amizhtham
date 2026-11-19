@@ -106,7 +106,9 @@ export async function savePostAction(formData: FormData): Promise<void> {
     .map((v) => Number(v))
     .filter((n) => Number.isInteger(n) && n > 0);
   const pageHerb = Number(formData.get("page_herb"));
-  const pageHerbId = Number.isInteger(pageHerb) && pageHerb > 0 ? pageHerb : null;
+  const isProperties = formData.get("post_type") === "properties";
+  if (isProperties && !(Number.isInteger(pageHerb) && pageHerb > 0)) redirect(`${backTo}?error=${encodeURIComponent("Choose the herb for this Medicinal properties post.")}`);
+  const pageHerbId = isProperties && Number.isInteger(pageHerb) && pageHerb > 0 ? pageHerb : null;
   if (pageHerbId && !tagIds.includes(pageHerbId)) tagIds.push(pageHerbId);
   const tags = await withEnglishAddresses([
     ...asSection(String(formData.get("herbs_new") ?? ""), HERB_SECTION),
