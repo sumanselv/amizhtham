@@ -61,17 +61,28 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
 
       {!q && tags.length > 0 && (
-        <section aria-label={ui.browseByRemedy} className="mb-8 flex flex-wrap gap-2 sm:mb-10">
-          {tags.map((tag) => (
-            <Link
-              key={tag.id}
-              href={withPrefix(prefix, tagHref(tag))}
-              lang={langOf(tag.name)}
-              className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)] hover:text-[var(--brand-dark)] sm:px-4"
-            >
-              {tag.name}
-            </Link>
-          ))}
+        <section aria-label={ui.browseByRemedy} className="mb-8 space-y-2 sm:mb-10">
+          {/* Herbs on the first row, causes on the second, anything else after. */}
+          {[
+            tags.filter((t) => t.section === "herbs"),
+            tags.filter((t) => t.section === "causes"),
+            tags.filter((t) => t.section !== "herbs" && t.section !== "causes"),
+          ]
+            .filter((row) => row.length > 0)
+            .map((row, i) => (
+              <div key={i} className="flex flex-wrap gap-2">
+                {row.map((tag) => (
+                  <Link
+                    key={tag.id}
+                    href={withPrefix(prefix, tagHref(tag))}
+                    lang={langOf(tag.name)}
+                    className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)] hover:text-[var(--brand-dark)] sm:px-4"
+                  >
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            ))}
         </section>
       )}
 

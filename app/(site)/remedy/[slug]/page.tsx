@@ -52,7 +52,10 @@ export default async function RemedyPage({ params }: Props) {
   const pLang = lang === "en" ? "en" : "ta";
   const url = pageUrl(pLang, `/remedy/${encodeURIComponent(post.slug)}`);
   // Authors and books are shown on their own lines, not as tags.
-  const tags = post.tags.filter((t) => !isPeopleSection(t.section));
+  const tags = post.tags
+    .filter((t) => !isPeopleSection(t.section))
+    // Herbs first, then causes, then anything else.
+    .sort((a, b) => (a.section === "herbs" ? 0 : a.section === "causes" ? 1 : 2) - (b.section === "herbs" ? 0 : b.section === "causes" ? 1 : 2));
   const authors = post.tags.filter((t) => t.section === "author");
   const books = post.tags.filter((t) => t.section === "book");
   const firstTag = tags[0];
@@ -104,18 +107,29 @@ export default async function RemedyPage({ params }: Props) {
         {post.title}
       </h1>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {tags.map((tag) => (
-          <Link
-            key={tag.id}
-            href={withPrefix(prefix, tagHref(tag))}
-            lang={langOf(tag.name)}
-            className="rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
-          >
-            {tag.name}
-          </Link>
-        ))}
-        <span className="text-sm text-[var(--muted)]">{formatPostDate(post.published_at ?? post.created_at, lang, locale)}</span>
+      <div className="mt-4 space-y-2">
+        {[
+          tags.filter((t) => t.section === "herbs"),
+          tags.filter((t) => t.section === "causes"),
+          tags.filter((t) => t.section !== "herbs" && t.section !== "causes"),
+        ]
+          .filter((row) => row.length > 0)
+          .map((row, i) => (
+            // One row for herbs, one for causes (anything else goes last).
+            <div key={i} className="flex flex-wrap items-center gap-3">
+              {row.map((tag) => (
+                <Link
+                  key={tag.id}
+                  href={withPrefix(prefix, tagHref(tag))}
+                  lang={langOf(tag.name)}
+                  className="rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand)] hover:text-white"
+                >
+                  {tag.name}
+                </Link>
+              ))}
+            </div>
+          ))}
+        <p className="text-sm text-[var(--muted)]">{formatPostDate(post.published_at ?? post.created_at, lang, locale)}</p>
       </div>
 
       {(authors.length > 0 || books.length > 0) && (
