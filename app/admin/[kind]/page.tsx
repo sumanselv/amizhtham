@@ -52,6 +52,9 @@ export default async function EntriesPage({
               Add {kind.one.toLowerCase()}
             </button>
           </div>
+          {key === "books" && (
+            <input name="link" type="url" maxLength={500} aria-label="Book link" placeholder="Link to the book (optional), e.g. https://..." className="field mt-3" />
+          )}
           <p className="mt-2 text-xs text-[var(--muted)]">The name can be in any language. The English address is optional: if empty, it is made from the English meaning of the name.</p>
         </form>
 
@@ -66,7 +69,8 @@ export default async function EntriesPage({
               <span className="w-16">Delete</span>
             </div>
             {entries.map((e) => (
-              <div key={e.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div key={e.id} className="space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                 <input name={`name_${e.id}`} defaultValue={e.name} maxLength={60} lang={langOf(e.name)} aria-label={`Name of ${e.name}`} className="field sm:flex-1" />
                 <div className="flex items-center gap-1 sm:w-64">
                   <span className="whitespace-nowrap text-sm text-[var(--muted)]">/{kind.section}/</span>
@@ -76,6 +80,10 @@ export default async function EntriesPage({
                   <input type="checkbox" name={`del_${e.id}`} />
                   {e.post_count ? `${e.post_count} post${e.post_count > 1 ? "s" : ""}` : "unused"}
                 </label>
+              </div>
+              {key === "books" && (
+                <input name={`link_${e.id}`} type="url" maxLength={500} defaultValue={e.link ?? ""} aria-label={`Link of ${e.name}`} placeholder="Link to the book (optional), e.g. https://..." className="field" />
+              )}
               </div>
             ))}
             <p className="text-xs text-[var(--muted)]">Tick the box and save to delete an entry. It is also removed from the posts that use it.</p>

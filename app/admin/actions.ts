@@ -190,6 +190,14 @@ export async function deletePostAction(formData: FormData): Promise<void> {
 /* ------------------------------ tags ------------------------------ */
 
 /** Add a herb, cause, author or book on its own (no post needed). */
+/** A web link must start with http:// or https://. Empty is fine. */
+function cleanLink(raw: string, fail: (msg: string) => never): string | null {
+  const v = raw.trim().slice(0, 500);
+  if (!v) return null;
+  if (!/^https?:\/\/[^\s]+$/i.test(v)) fail("The link must start with http:// or https://");
+  return v;
+}
+
 export async function addEntryAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const kindRaw = String(formData.get("kind") ?? "");
@@ -207,7 +215,8 @@ export async function addEntryAction(formData: FormData): Promise<void> {
   const [input] = await withEnglishAddresses([rawSlug ? { name, slug: slugify(rawSlug) } : { name }]);
   const slug = input.slug || tagSlugFor(name) || `tag-${randomCode()}`;
 
-  const result = await createTag(name, slug, kind.section);
+  const link = kind.section === "book" ? cleanLink(String(formData.get("link") ?? ""), fail) : null;
+  const result = await createTag(name, slug, kind.section, link);
   if (result === "exists") fail(`"${name}" or the address "${slug}" already exists.`);
   redirect(`${back}?added=${encodeURIComponent(name)}`);
 }
@@ -218,6 +227,8 @@ export async function saveEntriesAction(formData: FormData): Promise<void> {
   const kindRaw = String(formData.get("kind") ?? "");
   if (!isKind(kindRaw)) redirect("/admin");
   const back = `/admin/${kindRaw}`;
+  const fail = (msg: string): never => redirect(`${back}?error=${encodeURIComponent(msg)}`);
+  const isBook = KINDS[kindRaw].section === "book";
   const entries = await listTagsBySection(KINDS[kindRaw].section);
   const taken: string[] = [];
   for (const entry of entries) {
@@ -230,8 +241,9 @@ export async function saveEntriesAction(formData: FormData): Promise<void> {
     if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
     const name = rawName.trim().replace(/\s+/g, " ").slice(0, 60) || entry.name;
     const slug = slugify(rawSlug) || entry.slug;
-    if (name === entry.name && slug === entry.slug) continue;
-    if ((await updateTag(entry.id, name, slug, entry.section)) === "slug-taken") taken.push(slug);
+    const link = isBook ? cleanLink(String(formData.get(`link_${entry.id}`) ?? ""), fail) : undefined;
+    if (name === entry.name && slug === entry.slug && (link === undefined || link === (entry.link ?? null))) continue;
+    if ((await updateTag(entry.id, name, slug, entry.section, link)) === "slug-taken") taken.push(slug);
   }
   if (taken.length) redirect(`${back}?error=${encodeURIComponent(`These addresses are already used: ${taken.join(", ")}`)}`);
   redirect(`${back}?saved=1`);

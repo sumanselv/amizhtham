@@ -27,6 +27,7 @@ export async function GET() {
     ...entry("/tags"),
     ...entry("/herbs"),
     ...entry("/causes"),
+    ...entry("/books"),
     ...entry("/contact"),
     ...tags.flatMap((t) => [...entry(tagHref(t)), ...(t.section === "author" ? entry(`${tagHref(t)}/books`) : [])]),
     ...posts.flatMap((p) => entry(`/remedy/${encodeURIComponent(p.slug)}`, p.updated_at.slice(0, 10))),

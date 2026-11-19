@@ -88,6 +88,14 @@ export default async function TagPage({ params, searchParams }: Props) {
         {ui.postsUsingThis}
       </p>
 
+      {rawTag.section === "book" && rawTag.link && (
+        <p className="mt-4">
+          <a href={rawTag.link} target="_blank" rel="noopener noreferrer nofollow" lang={lang} className="btn btn-primary inline-block">
+            {ui.openBook} ↗
+          </a>
+        </p>
+      )}
+
       {books.length > 0 && (
         <section aria-label={ui.booksByAuthor} className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--brand-soft)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

@@ -13,6 +13,7 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
   const brand = brandFor(lang);
   const home = withPrefix(prefixFor(lang), "/");
   const contact = withPrefix(prefixFor(lang), "/contact");
+  const books = withPrefix(prefixFor(lang), "/books");
   return (
     <header className="relative border-b border-[var(--line)] bg-white">
       <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6 md:py-4">
@@ -32,6 +33,9 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
           <Link href={home} lang={lang} className="hover:text-[var(--ink)]">
             {HOME_LABEL}
           </Link>
+          <Link href={books} lang={lang} className="ml-6 hover:text-[var(--ink)]">
+            {ui.books}
+          </Link>
           <Link href={contact} lang={lang} className="ml-6 hover:text-[var(--ink)]">
             {ui.contact}
           </Link>
@@ -47,6 +51,9 @@ export default async function SiteHeader({ query = "" }: { query?: string }) {
         <MobileMenu>
           <Link href={home} lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
             {HOME_LABEL}
+          </Link>
+          <Link href={books} lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
+            {ui.books}
           </Link>
           <Link href={contact} lang={lang} className="block rounded-lg px-3 py-2 text-lg font-semibold hover:bg-slate-100">
             {ui.contact}

@@ -9,13 +9,14 @@ import { getUi } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-type Kind = "herbs" | "causes";
+type Kind = "herbs" | "causes" | "books";
+const SECTION: Record<Kind, string> = { herbs: "herbs", causes: "causes", books: "book" };
 
 export async function indexMetadata(kind: Kind): Promise<Metadata> {
   const lang = await getLang();
   const ui = await getUi(lang);
   const title = ui[kind];
-  const description = kind === "herbs" ? ui.herbsSub : ui.causesSub;
+  const description = kind === "herbs" ? ui.herbsSub : kind === "causes" ? ui.causesSub : ui.booksSub;
   const alternates = alternatesFor(lang, `/${kind}`);
   return { title, description, alternates, ...shareMeta({ lang, title: `${title} | ${brandFor(lang)}`, description, url: alternates.canonical, siteName: brandFor(lang) }) };
 }
@@ -24,12 +25,12 @@ export async function indexMetadata(kind: Kind): Promise<Metadata> {
 export default async function SectionIndex({ kind }: { kind: Kind }) {
   const lang = await getLang();
   const prefix = await getPrefix();
-  const [raw, ui] = await Promise.all([listTagsInSection(kind), getUi(lang)]);
+  const [raw, ui] = await Promise.all([listTagsInSection(SECTION[kind]), getUi(lang)]);
   const entries = await localizeTags(lang, raw);
   return (
     <>
       <h1 lang={lang} className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">{ui[kind]}</h1>
-      <p lang={lang} className="mt-2 text-[var(--muted)]">{kind === "herbs" ? ui.herbsSub : ui.causesSub}</p>
+      <p lang={lang} className="mt-2 text-[var(--muted)]">{kind === "herbs" ? ui.herbsSub : kind === "causes" ? ui.causesSub : ui.booksSub}</p>
 
       {entries.length === 0 ? (
         <p lang={lang} className="mt-8 text-[var(--muted)]">{ui.noEntries}</p>
