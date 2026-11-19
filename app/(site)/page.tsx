@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import PostCard from "@/components/PostCard";
 import Pagination from "@/components/Pagination";
-import { PAGE_SIZE, listPosts } from "@/lib/db";
+import { PAGE_SIZE, listPosts, listTags } from "@/lib/db";
+import { langOf, tagHref } from "@/lib/slug";
 import { brandFor } from "@/lib/brand";
-import { getLang, languageOf, localizePosts } from "@/lib/i18n";
+import { getLang, getPrefix, languageOf, localizePosts, localizeTags, withPrefix } from "@/lib/i18n";
 import { SITE_URL, alternatesFor, pageUrl, shareMeta } from "@/lib/seo";
 import { getUi } from "@/lib/ui";
 
@@ -28,8 +30,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const lang = await getLang();
-  const [{ posts: rawPosts, total }, ui] = await Promise.all([listPosts({ q, page }), getUi(lang)]);
-  const posts = await localizePosts(lang, rawPosts);
+  const prefix = await getPrefix();
+  const [{ posts: rawPosts, total }, rawTags, ui] = await Promise.all([listPosts({ q, page }), listTags(), getUi(lang)]);
+  const [posts, tags] = await Promise.all([localizePosts(lang, rawPosts), localizeTags(lang, rawTags)]);
   const locale = languageOf(lang).locale;
 
   const brand = brandFor(lang);
@@ -55,6 +58,26 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </h1>
       ) : (
         <h1 className="sr-only">{brandFor(lang)}</h1>
+      )}
+
+      {!q && tags.some((t) => t.section === "herbs") && (
+        <section aria-label={ui.browseByRemedy} className="mb-8 sm:mb-10">
+          {/* Only herbs are shown here; causes appear on the posts. */}
+          <div className="flex flex-wrap gap-2">
+            {tags
+              .filter((t) => t.section === "herbs")
+              .map((tag) => (
+                <Link
+                  key={tag.id}
+                  href={withPrefix(prefix, tagHref(tag))}
+                  lang={langOf(tag.name)}
+                  className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[var(--brand)] hover:text-[var(--brand-dark)] sm:px-4"
+                >
+                  {tag.name}
+                </Link>
+              ))}
+          </div>
+        </section>
       )}
 
       {posts.length === 0 ? (
