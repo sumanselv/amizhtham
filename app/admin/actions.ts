@@ -1,5 +1,6 @@
 "use server";
 
+import { waitUntil } from "cloudflare:workers";
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
 import { createPost, createTag, deleteTag, listTagsBySection, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, updatePost, updateTag, type PostInput } from "@/lib/db";
@@ -168,14 +169,20 @@ export async function savePostAction(formData: FormData): Promise<void> {
     postId = await createPost(input);
   }
 
-  // Translate the post into English now, so its /en page is complete before search engines visit it.
+  // Translate the post into English in the background, so saving is instant and the /en page is ready soon after.
+  // (The page also translates itself the first time it is visited, so nothing is lost if this is cut short.)
   if (published && postId) {
-    try {
-      const fresh = await getPostById(postId);
-      if (fresh) await warmPost("en", fresh);
-    } catch {
-      /* best effort: the page also translates itself when visited */
-    }
+    const pid = postId;
+    waitUntil(
+      (async () => {
+        try {
+          const fresh = await getPostById(pid);
+          if (fresh) await warmPost("en", fresh);
+        } catch {
+          /* best effort */
+        }
+      })(),
+    );
   }
 
   if (intent === "publish") redirect("/admin?saved=published");
