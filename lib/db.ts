@@ -305,18 +305,6 @@ export const listTagsInSection = cache(async (section: string): Promise<Tag[]> =
   return rows.results;
 });
 
-/** Every tag (including ones only used by drafts) for the admin rename page. */
-export async function listAllTags(): Promise<Tag[]> {
-  const d1 = await db();
-  const rows = await d1
-    .prepare(
-      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, COUNT(pt.post_id) AS post_count
-       FROM tags t LEFT JOIN post_tags pt ON pt.tag_id = t.id GROUP BY t.id ORDER BY t.name`,
-    )
-    .all<Tag>();
-  return rows.results;
-}
-
 /** Change a tag's display name and English address. Returns "slug-taken" if another tag already uses the address. */
 export async function updateTag(id: number, name: string, slug: string, section = "tag", link?: string | null): Promise<"ok" | "slug-taken"> {
   const d1 = await db();
@@ -333,12 +321,6 @@ export async function createTag(name: string, slug: string, section: string, lin
   if (clash) return "exists";
   await d1.prepare("INSERT INTO tags (name, slug, section, kept, link) VALUES (?, ?, ?, 1, ?)").bind(name, slug, section, link).run();
   return "ok";
-}
-
-/** Delete a tag that no post uses. */
-export async function deleteUnusedTag(id: number): Promise<void> {
-  const d1 = await db();
-  await d1.prepare("DELETE FROM tags WHERE id = ? AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").bind(id).run();
 }
 
 /** Books (tags in the "book" section) that share a published post with the given author. */
@@ -387,12 +369,6 @@ export async function deleteTag(id: number): Promise<void> {
   const d1 = await db();
   await d1.prepare("DELETE FROM post_tags WHERE tag_id = ?").bind(id).run();
   await d1.prepare("DELETE FROM tags WHERE id = ?").bind(id).run();
-}
-
-export async function listAllTagNames(): Promise<string[]> {
-  const d1 = await db();
-  const rows = await d1.prepare("SELECT name FROM tags ORDER BY name").all<{ name: string }>();
-  return rows.results.map((r) => r.name);
 }
 
 export async function listRelatedPosts(post: PostWithTags, limit = 3): Promise<PostWithTags[]> {
