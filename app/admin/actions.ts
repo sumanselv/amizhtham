@@ -171,26 +171,13 @@ export async function savePostAction(formData: FormData): Promise<void> {
     cover = null;
   }
 
-  // Poet image: same rules as the cover image.
-  let poetImage = existing?.poet_image ?? null;
-  let replacedPoetImage: string | null = null;
-  const poetUpload = formData.get("poet_image");
-  if (poetUpload instanceof File && poetUpload.size > 0) {
-    replacedPoetImage = poetImage;
-    poetImage = await storeImage(poetUpload, backTo);
-  } else if (formData.get("remove_poet_image") === "on") {
-    replacedPoetImage = poetImage;
-    poetImage = null;
-  }
-
   const published = intent === "publish" ? true : intent === "unpublish" ? false : existing?.published === 1;
-  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poet_image: poetImage, poem_note: poemNote, poem_page: poemPage, page_herb_id: pageHerbId };
+  const input: PostInput = { title, slug, description, content, cover_image: cover, published, tags, tag_ids: tagIds, poem, poet, poem_note: poemNote, poem_page: poemPage, page_herb_id: pageHerbId };
 
   let postId = id;
   if (id) {
     await updatePost(id, input);
     if (replacedCover && replacedCover !== cover) await removeImageIfUnused(replacedCover, id);
-    if (replacedPoetImage && replacedPoetImage !== poetImage) await removeImageIfUnused(replacedPoetImage, id);
   } else {
     postId = await createPost(input);
   }

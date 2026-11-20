@@ -26,7 +26,6 @@ export interface Post {
   /** Name of the poet, never translated. */
   poet: string;
   /** Image of the poet (R2 key). */
-  poet_image: string | null;
   /** Explanation of the poem: translated like the post body. */
   poem_note: string;
   /** Page number of the poem in its book (optional, shown under the poem). */
@@ -98,7 +97,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "12";
+const SCHEMA_VERSION = "13";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -117,8 +116,9 @@ async function init(): Promise<D1Like> {
   }
   // Older databases: add the poem / poet columns.
   const postCols = await d1.prepare("PRAGMA table_info(posts)").all<{ name: string }>();
-  if (!postCols.results.some((c) => c.name === "poet_image")) {
-    await d1.prepare("ALTER TABLE posts ADD COLUMN poet_image TEXT").run();
+  // The poet image was removed: drop its column from older databases.
+  if (postCols.results.some((c) => c.name === "poet_image")) {
+    await d1.prepare("ALTER TABLE posts DROP COLUMN poet_image").run();
   }
   if (!postCols.results.some((c) => c.name === "herb_page")) {
     await d1.prepare("ALTER TABLE posts ADD COLUMN herb_page INTEGER").run();
@@ -169,7 +169,7 @@ const CARD_COLS = `p.id, p.title, p.slug, p.description, p.cover_image, p.publis
 type CardRow = Pick<Post, "id" | "title" | "slug" | "description" | "cover_image" | "published" | "created_at" | "updated_at" | "published_at" | "herb_page" | "herb_slug">;
 
 function fullPost(r: CardRow | Post): Post {
-  return { content: "", poem: "", poet: "", poet_image: null, poem_note: "", poem_page: "", ...r };
+  return { content: "", poem: "", poet: "", poem_note: "", poem_page: "", ...r };
 }
 
 export async function listPosts(opts: {
@@ -494,7 +494,6 @@ export interface PostInput {
   tag_ids?: number[];
   poem?: string;
   poet?: string;
-  poet_image?: string | null;
   poem_note?: string;
   poem_page?: string;
   /** Herb id when this post is that herb's medicinal-properties page. */
@@ -507,10 +506,10 @@ export async function createPost(input: PostInput): Promise<number> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title));
   await d1
     .prepare(
-      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poet_image, poem_note, poem_page, herb_page, published, created_at, updated_at, published_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO posts (title, slug, description, content, cover_image, poem, poet, poem_note, poem_page, herb_page, published, created_at, updated_at, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, now, now, input.published ? now : null)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, now, now, input.published ? now : null)
     .run();
   const row = await d1.prepare("SELECT id FROM posts WHERE slug = ?").bind(slug).first<{ id: number }>();
   const id = row!.id;
@@ -524,32 +523,32 @@ export async function updatePost(id: number, input: PostInput): Promise<void> {
   const slug = await uniqueSlug(d1, slugify(input.slug || input.title), id);
   await d1
     .prepare(
-      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poet_image = ?, poem_note = ?, poem_page = ?, herb_page = ?, published = ?, updated_at = ?,
+      `UPDATE posts SET title = ?, slug = ?, description = ?, content = ?, cover_image = ?, poem = ?, poet = ?, poem_note = ?, poem_page = ?, herb_page = ?, published = ?, updated_at = ?,
          published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, ?) ELSE published_at END
        WHERE id = ?`,
     )
-    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poet_image ?? null, input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
+    .bind(input.title, slug, input.description, input.content, input.cover_image, input.poem ?? "", input.poet ?? "", input.poem_note ?? "", input.poem_page ?? "", input.page_herb_id ?? null, input.published ? 1 : 0, new Date().toISOString(), input.published ? 1 : 0, new Date().toISOString(), id)
     .run();
   if (input.page_herb_id) await d1.prepare("UPDATE posts SET herb_page = NULL WHERE herb_page = ? AND id != ?").bind(input.page_herb_id, id).run();
   await setPostTags(d1, id, input.tags, input.category, input.tag_ids);
 }
 
-/** Deletes a post and returns its image keys (cover and poet) so unused files can be cleaned up. */
+/** Deletes a post and returns its image key so unused files can be cleaned up. */
 export async function deletePost(id: number): Promise<string[]> {
   const d1 = await db();
-  const row = await d1.prepare("SELECT cover_image, poet_image FROM posts WHERE id = ?").bind(id).first<{ cover_image: string | null; poet_image: string | null }>();
+  const row = await d1.prepare("SELECT cover_image FROM posts WHERE id = ?").bind(id).first<{ cover_image: string | null }>();
   await d1.prepare("DELETE FROM post_tags WHERE post_id = ?").bind(id).run();
   await d1.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
   await d1.prepare("DELETE FROM tags WHERE kept = 0 AND id NOT IN (SELECT DISTINCT tag_id FROM post_tags)").run();
-  return [row?.cover_image, row?.poet_image].filter((k): k is string => !!k);
+  return [row?.cover_image].filter((k): k is string => !!k);
 }
 
 /** Is this image key still used by any other post? */
 export async function isImageInUse(key: string, exceptPostId?: number): Promise<boolean> {
   const d1 = await db();
   const hit = await d1
-    .prepare("SELECT id FROM posts WHERE (cover_image = ? OR poet_image = ?) AND id != ?")
-    .bind(key, key, exceptPostId ?? -1)
+    .prepare("SELECT id FROM posts WHERE cover_image = ? AND id != ?")
+    .bind(key, exceptPostId ?? -1)
     .first();
   return !!hit;
 }

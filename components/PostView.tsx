@@ -161,7 +161,7 @@ export default async function PostView({ raw, path }: { raw: PostWithTags; path:
         </div>
       )}
 
-      {(post.poem || post.poet || post.poet_image) && (
+      {(post.poem || post.poet) && (
         // Only the poem (and its poet) is highlighted.
         <section className="mt-8 rounded-r-xl border-l-4 border-[var(--brand)] bg-[var(--brand-soft)] px-5 py-4 sm:mt-10 sm:px-6">
           {post.poem && (
@@ -175,12 +175,8 @@ export default async function PostView({ raw, path }: { raw: PostWithTags; path:
               <span lang={lang}>{ui.poemPage}</span> {post.poem_page}
             </p>
           )}
-          {(post.poet || post.poet_image) && (
-            <div translate="no" className={`notranslate flex items-center gap-3 ${post.poem ? "mt-4" : ""}`}>
-              {post.poet_image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverUrl(post.poet_image)!} alt={post.poet || ""} className="h-16 w-16 shrink-0 rounded-full border border-white object-cover shadow-sm sm:h-20 sm:w-20" />
-              )}
+          {post.poet && (
+            <div translate="no" className={`notranslate ${post.poem ? "mt-4" : ""}`}>
               {post.poet && (
                 <p lang={langOf(post.poet)} className="font-semibold text-[var(--brand-dark)]">
                   {post.poet}

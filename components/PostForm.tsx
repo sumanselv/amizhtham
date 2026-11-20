@@ -147,7 +147,7 @@ export default function PostForm({ post, error, notice, entries, defaultType = "
       <div className="rounded-xl border border-[var(--line)] bg-slate-50 p-4">
         <p className="text-sm font-semibold">Poem section <span className="font-normal text-[var(--muted)]">(optional)</span></p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          An original verse, shown in slanted type and <strong>never translated</strong>. After it come the poet&apos;s image and name, then your explanation.
+          An original verse, shown in slanted type and <strong>never translated</strong>. After it come the poet&apos;s name, then your explanation.
         </p>
         <label htmlFor="poem" className="mb-1 mt-3 block text-sm font-semibold">
           Poem
@@ -161,24 +161,6 @@ export default function PostForm({ post, error, notice, entries, defaultType = "
           Poet / author name <span className="font-normal text-[var(--muted)]">(never translated)</span>
         </label>
         <input id="poet" name="poet" maxLength={100} defaultValue={post?.poet} className="field" placeholder="Poet's name" />
-
-        <label htmlFor="poet_image" className="mb-1 mt-3 block text-sm font-semibold">
-          Poet image <span className="font-normal text-[var(--muted)]">(optional, shown after the poem)</span>
-        </label>
-        {post?.poet_image && (
-          <div className="mb-3 flex items-center gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={coverUrl(post.poet_image)!} alt="Current poet image" className="h-20 w-20 rounded-full border border-[var(--line)] object-cover" />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="remove_poet_image" /> Remove this image
-            </label>
-          </div>
-        )}
-        {imagesEnabled() ? (
-          <input id="poet_image" name="poet_image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" className="block w-full text-sm" />
-        ) : (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Image upload is off until R2 is enabled on the Cloudflare account (see README).</p>
-        )}
 
         <label htmlFor="poem_note" className="mb-1 mt-3 block text-sm font-semibold">
           Explanation <span className="font-normal text-[var(--muted)]">(meaning of the poem; this part IS translated for other languages)</span>
