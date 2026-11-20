@@ -9,7 +9,7 @@ import { translateMany, warmPost } from "@/lib/i18n";
 import { AUTHOR_SECTION, BOOK_SECTION, CAUSE_SECTION, HERB_SECTION, KINDS, isKind, randomCode, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_PDF_BYTES = 25 * 1024 * 1024;
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 /* ------------------------------ login / logout ------------------------------ */
 
@@ -60,13 +60,18 @@ async function storeImage(file: File, backTo: string): Promise<string> {
 async function storePdf(file: File, backTo: string): Promise<string> {
   const store = getEnv().IMAGES;
   if (!store) redirect(`${backTo}?error=${encodeURIComponent("File storage is not set up yet (R2 is not enabled).")}`);
-  if (file.size > MAX_PDF_BYTES) redirect(`${backTo}?error=${encodeURIComponent("The PDF is larger than 25 MB.")}`);
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!(bytes.length > 5 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d)) {
+  if (file.size > MAX_PDF_BYTES) redirect(`${backTo}?error=${encodeURIComponent("The PDF is larger than 50 MB.")}`);
+  // Only the first bytes are read into memory; the rest streams straight into storage, so big files stay light.
+  const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  if (!(head.length === 5 && head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46 && head[4] === 0x2d)) {
     redirect(`${backTo}?error=${encodeURIComponent("That file is not a PDF.")}`);
   }
   const key = `${crypto.randomUUID()}.pdf`;
-  await store.put(key, bytes.buffer as ArrayBuffer, { httpMetadata: { contentType: "application/pdf" } });
+  const FixedLengthStream = (globalThis as unknown as { FixedLengthStream: new (n: number) => { readable: ReadableStream; writable: WritableStream } }).FixedLengthStream;
+  const fixed = new FixedLengthStream(file.size);
+  const copying = file.stream().pipeTo(fixed.writable);
+  await store.put(key, fixed.readable, { httpMetadata: { contentType: "application/pdf" } });
+  await copying;
   return key;
 }
 

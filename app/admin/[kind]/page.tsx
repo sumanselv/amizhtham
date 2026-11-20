@@ -55,7 +55,7 @@ export default async function EntriesPage({
           {key === "books" && (
             <div className="mt-3">
               <label htmlFor="pdf" className="mb-1 block text-sm font-semibold">
-                Book PDF <span className="font-normal text-[var(--muted)]">(optional, up to 25 MB)</span>
+                Book PDF <span className="font-normal text-[var(--muted)]">(optional, up to 50 MB)</span>
               </label>
               <input id="pdf" name="pdf" type="file" accept="application/pdf,.pdf" className="field" />
             </div>
