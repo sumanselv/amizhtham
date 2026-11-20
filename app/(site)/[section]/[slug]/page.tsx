@@ -99,9 +99,9 @@ export default async function TagPage({ params, searchParams }: Props) {
         {ui.postsUsingThis}
       </p>
 
-      {rawTag.section === "book" && rawTag.link && (
+      {rawTag.section === "book" && rawTag.pdf && (
         <p className="mt-4">
-          <a href={rawTag.link} target="_blank" rel="noopener noreferrer nofollow" lang={lang} className="btn btn-primary inline-block">
+          <a href={`/pdf/${rawTag.pdf}`} target="_blank" rel="noopener" lang={lang} className="btn btn-primary inline-block">
             {ui.openBook} ↗
           </a>
         </p>

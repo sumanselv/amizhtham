@@ -11,7 +11,7 @@ function canCache(request: Request, url: URL): boolean {
   if (request.method !== "GET") return false;
   const p = url.pathname;
   // Never cache the admin, language switch, images, search results or the contact form.
-  if (p.startsWith("/admin") || p.startsWith("/lang") || p.startsWith("/img/") || p.startsWith("/_next/")) return false;
+  if (p.startsWith("/admin") || p.startsWith("/lang") || p.startsWith("/img/") || p.startsWith("/pdf/") || p.startsWith("/_next/")) return false;
   if (p === "/contact" || p === "/en/contact") return false;
   if (url.searchParams.has("q")) return false;
   // Visitors who are signed in as admin, or who picked a language, get their own page.

@@ -32,5 +32,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Public pages only: not admin, assets, images, language switch, sitemap, robots, icons.
-  matcher: ["/((?!_next/|admin|img/|lang|sitemap\\.xml|robots\\.txt|og\\.png|favicon).*)"],
+  matcher: ["/((?!_next/|admin|img/|pdf/|lang|sitemap\\.xml|robots\\.txt|og\\.png|favicon).*)"],
 };

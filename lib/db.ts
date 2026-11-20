@@ -10,8 +10,8 @@ export interface Tag {
   /** First part of the tag address, "tag" by default (/tag/amla); the admin can change it (/fruit/amla). */
   section: string;
   post_count?: number;
-  /** Optional web link (books only): where to read or buy the book. */
-  link?: string | null;
+  /** Book PDF (R2 key, books only). */
+  pdf?: string | null;
 }
 
 export interface Post {
@@ -98,7 +98,7 @@ export function db(): Promise<D1Like> {
 }
 
 /** Bump when a new table or column is added: databases already at this version skip all setup work (one quick query on a cold start). */
-const SCHEMA_VERSION = "11";
+const SCHEMA_VERSION = "12";
 
 async function init(): Promise<D1Like> {
   const d1 = getEnv().DB;
@@ -133,8 +133,8 @@ async function init(): Promise<D1Like> {
   if (!cols.results.some((c) => c.name === "section")) {
     await d1.prepare("ALTER TABLE tags ADD COLUMN section TEXT NOT NULL DEFAULT 'tag'").run();
   }
-  if (!cols.results.some((c) => c.name === "link")) {
-    await d1.prepare("ALTER TABLE tags ADD COLUMN link TEXT").run();
+  if (!cols.results.some((c) => c.name === "pdf")) {
+    await d1.prepare("ALTER TABLE tags ADD COLUMN pdf TEXT").run();
   }
   // Tags added by hand in the admin (no post needed) are marked "kept" so they are not cleaned up.
   if (!cols.results.some((c) => c.name === "kept")) {
@@ -269,7 +269,7 @@ export async function getPostById(id: number): Promise<PostWithTags | null> {
 
 export const getTagBySlug = cache(async (slug: string): Promise<Tag | null> => {
   const d1 = await db();
-  return d1.prepare("SELECT id, name, slug, section, link FROM tags WHERE slug = ?").bind(slug).first<Tag>();
+  return d1.prepare("SELECT id, name, slug, section, pdf FROM tags WHERE slug = ?").bind(slug).first<Tag>();
 });
 
 /** All tags that have at least one published post, with counts. */
@@ -293,7 +293,7 @@ export const listTagsInSection = cache(async (section: string): Promise<Tag[]> =
   const d1 = await db();
   const rows = await d1
     .prepare(
-      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, t.link AS link, COUNT(p.id) AS post_count
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, t.pdf AS pdf, COUNT(p.id) AS post_count
        FROM tags t
        JOIN post_tags pt ON pt.tag_id = t.id
        JOIN posts p ON p.id = pt.post_id AND p.published = 1
@@ -306,20 +306,20 @@ export const listTagsInSection = cache(async (section: string): Promise<Tag[]> =
 });
 
 /** Change a tag's display name and English address. Returns "slug-taken" if another tag already uses the address. */
-export async function updateTag(id: number, name: string, slug: string, section = "tag", link?: string | null): Promise<"ok" | "slug-taken"> {
+export async function updateTag(id: number, name: string, slug: string, section = "tag", pdf?: string | null): Promise<"ok" | "slug-taken"> {
   const d1 = await db();
   const clash = await d1.prepare("SELECT id FROM tags WHERE slug = ? AND id != ?").bind(slug, id).first();
   if (clash) return "slug-taken";
-  await d1.prepare("UPDATE tags SET name = ?, slug = ?, section = ?, link = ? WHERE id = ?").bind(name, slug, section, link === undefined ? (await d1.prepare("SELECT link FROM tags WHERE id = ?").bind(id).first<{ link: string | null }>())?.link ?? null : link, id).run();
+  await d1.prepare("UPDATE tags SET name = ?, slug = ?, section = ?, pdf = ? WHERE id = ?").bind(name, slug, section, pdf === undefined ? (await d1.prepare("SELECT pdf FROM tags WHERE id = ?").bind(id).first<{ pdf: string | null }>())?.pdf ?? null : pdf, id).run();
   return "ok";
 }
 
 /** Add a tag by itself (no post). It stays until the admin deletes it. Returns "exists" if the name or address is already used. */
-export async function createTag(name: string, slug: string, section: string, link: string | null = null): Promise<"ok" | "exists"> {
+export async function createTag(name: string, slug: string, section: string, pdf: string | null = null): Promise<"ok" | "exists"> {
   const d1 = await db();
   const clash = await d1.prepare("SELECT id FROM tags WHERE slug = ? OR name = ?").bind(slug, name).first();
   if (clash) return "exists";
-  await d1.prepare("INSERT INTO tags (name, slug, section, kept, link) VALUES (?, ?, ?, 1, ?)").bind(name, slug, section, link).run();
+  await d1.prepare("INSERT INTO tags (name, slug, section, kept, pdf) VALUES (?, ?, ?, 1, ?)").bind(name, slug, section, pdf).run();
   return "ok";
 }
 
@@ -347,7 +347,7 @@ export async function listTagsBySection(section: string): Promise<Tag[]> {
   const d1 = await db();
   const rows = await d1
     .prepare(
-      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, t.link AS link, COUNT(pt.post_id) AS post_count
+      `SELECT t.id AS id, t.name AS name, t.slug AS slug, t.section AS section, t.pdf AS pdf, COUNT(pt.post_id) AS post_count
        FROM tags t LEFT JOIN post_tags pt ON pt.tag_id = t.id WHERE t.section = ? GROUP BY t.id ORDER BY t.name`,
     )
     .bind(section)
@@ -365,10 +365,12 @@ export async function listEntries(): Promise<Tag[]> {
 }
 
 /** Delete an entry everywhere (it is also removed from the posts that use it). */
-export async function deleteTag(id: number): Promise<void> {
+export async function deleteTag(id: number): Promise<string | null> {
   const d1 = await db();
+  const row = await d1.prepare("SELECT pdf FROM tags WHERE id = ?").bind(id).first<{ pdf: string | null }>();
   await d1.prepare("DELETE FROM post_tags WHERE tag_id = ?").bind(id).run();
   await d1.prepare("DELETE FROM tags WHERE id = ?").bind(id).run();
+  return row?.pdf ?? null;
 }
 
 export async function listRelatedPosts(post: PostWithTags, limit = 3): Promise<PostWithTags[]> {

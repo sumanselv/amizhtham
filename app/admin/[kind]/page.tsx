@@ -39,7 +39,7 @@ export default async function EntriesPage({
           </p>
         )}
 
-        <form action={addEntryAction} className="mt-6 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
+        <form action={addEntryAction} encType="multipart/form-data" className="mt-6 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
           <input type="hidden" name="kind" value={key} />
           <h2 className="text-base font-bold">Add a {kind.one.toLowerCase()}</h2>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -53,7 +53,12 @@ export default async function EntriesPage({
             </button>
           </div>
           {key === "books" && (
-            <input name="link" type="url" maxLength={500} aria-label="Book link" placeholder="Link to the book (optional), e.g. https://..." className="field mt-3" />
+            <div className="mt-3">
+              <label htmlFor="pdf" className="mb-1 block text-sm font-semibold">
+                Book PDF <span className="font-normal text-[var(--muted)]">(optional, up to 25 MB)</span>
+              </label>
+              <input id="pdf" name="pdf" type="file" accept="application/pdf,.pdf" className="field" />
+            </div>
           )}
           <p className="mt-2 text-xs text-[var(--muted)]">The name can be in any language. The English address is optional: if empty, it is made from the English meaning of the name.</p>
         </form>
@@ -61,7 +66,7 @@ export default async function EntriesPage({
         {entries.length === 0 ? (
           <p className="mt-6 rounded-xl border border-dashed border-[var(--line)] bg-white p-8 text-center text-[var(--muted)]">No {kind.many.toLowerCase()} yet. Add the first one above.</p>
         ) : (
-          <form action={saveEntriesAction} className="mt-6 space-y-4 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
+          <form action={saveEntriesAction} encType="multipart/form-data" className="mt-6 space-y-4 rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
             <input type="hidden" name="kind" value={key} />
             <div className="hidden gap-4 text-xs font-semibold uppercase tracking-wide text-[var(--muted)] sm:flex">
               <span className="flex-1">Name (any language)</span>
@@ -82,7 +87,22 @@ export default async function EntriesPage({
                 </label>
               </div>
               {key === "books" && (
-                <input name={`link_${e.id}`} type="url" maxLength={500} defaultValue={e.link ?? ""} aria-label={`Link of ${e.name}`} placeholder="Link to the book (optional), e.g. https://..." className="field" />
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  {e.pdf ? (
+                    <>
+                      <a href={`/pdf/${e.pdf}`} target="_blank" rel="noopener" className="font-semibold text-[var(--brand-dark)] underline">
+                        View PDF
+                      </a>
+                      <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                        <input type="checkbox" name={`rmpdf_${e.id}`} /> Remove PDF
+                      </label>
+                      <span className="text-xs text-[var(--muted)]">Replace:</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-[var(--muted)]">PDF:</span>
+                  )}
+                  <input name={`pdf_${e.id}`} type="file" accept="application/pdf,.pdf" aria-label={`PDF of ${e.name}`} className="max-w-full text-xs" />
+                </div>
               )}
               </div>
             ))}

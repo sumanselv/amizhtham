@@ -10,7 +10,8 @@ const NOTICES: Record<string, string> = {
   unpublished: "Unpublished. The post is saved as a draft and is no longer shown on the site.",
 };
 
-export default function PostForm({ post, error, notice, entries }: { post?: PostWithTags; error?: string; notice?: string; entries: Tag[] }) {
+export default function PostForm({ post, error, notice, entries, defaultType = "remedy" }: { post?: PostWithTags; error?: string; notice?: string; entries: Tag[]; defaultType?: "remedy" | "properties" }) {
+  const isProperties = post ? !!post.herb_page : defaultType === "properties";
   // Show "name | english-url" for tags whose name is not English, so their address is visible and kept.
   const live = post?.published === 1;
   const linked = new Set(post?.tags.map((t) => t.id) ?? []);
@@ -49,13 +50,13 @@ export default function PostForm({ post, error, notice, entries }: { post?: Post
       <fieldset className="rounded-xl border border-[var(--line)] p-4">
         <legend className="px-1 text-sm font-semibold">Post type</legend>
         <label className="flex cursor-pointer items-start gap-2 text-sm">
-          <input type="radio" name="post_type" value="remedy" defaultChecked={!post?.herb_page} className="mt-1 h-4 w-4" />
+          <input type="radio" name="post_type" value="remedy" defaultChecked={!isProperties} className="mt-1 h-4 w-4" />
           <span>
             <strong>Remedy</strong> <span className="text-[var(--muted)]">opens at /remedy/url-name</span>
           </span>
         </label>
         <label className="mt-2 flex cursor-pointer items-start gap-2 text-sm">
-          <input type="radio" name="post_type" value="properties" defaultChecked={!!post?.herb_page} className="mt-1 h-4 w-4" />
+          <input type="radio" name="post_type" value="properties" defaultChecked={isProperties} className="mt-1 h-4 w-4" />
           <span>
             <strong>Medicinal properties</strong> <span className="text-[var(--muted)]">opens at /herbs/herb-name (no URL name needed)</span>
           </span>

@@ -9,6 +9,7 @@ import { translateMany, warmPost } from "@/lib/i18n";
 import { AUTHOR_SECTION, BOOK_SECTION, CAUSE_SECTION, HERB_SECTION, KINDS, isKind, randomCode, parseTagInput, slugify, type TagInput } from "@/lib/slug";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 /* ------------------------------ login / logout ------------------------------ */
 
@@ -53,6 +54,26 @@ async function storeImage(file: File, backTo: string): Promise<string> {
   const key = `${crypto.randomUUID()}.${kind.ext}`;
   await images.put(key, bytes.buffer as ArrayBuffer, { httpMetadata: { contentType: kind.type } });
   return key;
+}
+
+/** Save a book PDF in storage (checks the first bytes, not just the file name) and return its key. */
+async function storePdf(file: File, backTo: string): Promise<string> {
+  const store = getEnv().IMAGES;
+  if (!store) redirect(`${backTo}?error=${encodeURIComponent("File storage is not set up yet (R2 is not enabled).")}`);
+  if (file.size > MAX_PDF_BYTES) redirect(`${backTo}?error=${encodeURIComponent("The PDF is larger than 25 MB.")}`);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!(bytes.length > 5 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d)) {
+    redirect(`${backTo}?error=${encodeURIComponent("That file is not a PDF.")}`);
+  }
+  const key = `${crypto.randomUUID()}.pdf`;
+  await store.put(key, bytes.buffer as ArrayBuffer, { httpMetadata: { contentType: "application/pdf" } });
+  return key;
+}
+
+async function deleteStored(key: string | null | undefined): Promise<void> {
+  if (!key) return;
+  const store = getEnv().IMAGES;
+  if (store) await store.delete(key);
 }
 
 async function removeImageIfUnused(key: string | null, exceptPostId?: number): Promise<void> {
@@ -202,14 +223,6 @@ export async function deletePostAction(formData: FormData): Promise<void> {
 /* ------------------------------ tags ------------------------------ */
 
 /** Add a herb, cause, author or book on its own (no post needed). */
-/** A web link must start with http:// or https://. Empty is fine. */
-function cleanLink(raw: string, fail: (msg: string) => never): string | null {
-  const v = raw.trim().slice(0, 500);
-  if (!v) return null;
-  if (!/^https?:\/\/[^\s]+$/i.test(v)) fail("The link must start with http:// or https://");
-  return v;
-}
-
 export async function addEntryAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const kindRaw = String(formData.get("kind") ?? "");
@@ -227,8 +240,10 @@ export async function addEntryAction(formData: FormData): Promise<void> {
   const [input] = await withEnglishAddresses([rawSlug ? { name, slug: slugify(rawSlug) } : { name }]);
   const slug = input.slug || tagSlugFor(name) || `tag-${randomCode()}`;
 
-  const link = kind.section === "book" ? cleanLink(String(formData.get("link") ?? ""), fail) : null;
-  const result = await createTag(name, slug, kind.section, link);
+  const file = formData.get("pdf");
+  const pdf = kind.section === "book" && file instanceof File && file.size > 0 ? await storePdf(file, back) : null;
+  const result = await createTag(name, slug, kind.section, pdf);
+  if (result === "exists") await deleteStored(pdf);
   if (result === "exists") fail(`"${name}" or the address "${slug}" already exists.`);
   redirect(`${back}?added=${encodeURIComponent(name)}`);
 }
@@ -239,13 +254,12 @@ export async function saveEntriesAction(formData: FormData): Promise<void> {
   const kindRaw = String(formData.get("kind") ?? "");
   if (!isKind(kindRaw)) redirect("/admin");
   const back = `/admin/${kindRaw}`;
-  const fail = (msg: string): never => redirect(`${back}?error=${encodeURIComponent(msg)}`);
   const isBook = KINDS[kindRaw].section === "book";
   const entries = await listTagsBySection(KINDS[kindRaw].section);
   const taken: string[] = [];
   for (const entry of entries) {
     if (formData.get(`del_${entry.id}`) === "on") {
-      await deleteTag(entry.id);
+      await deleteStored(await deleteTag(entry.id));
       continue;
     }
     const rawName = formData.get(`name_${entry.id}`);
@@ -253,9 +267,16 @@ export async function saveEntriesAction(formData: FormData): Promise<void> {
     if (typeof rawName !== "string" || typeof rawSlug !== "string") continue;
     const name = rawName.trim().replace(/\s+/g, " ").slice(0, 60) || entry.name;
     const slug = slugify(rawSlug) || entry.slug;
-    const link = isBook ? cleanLink(String(formData.get(`link_${entry.id}`) ?? ""), fail) : undefined;
-    if (name === entry.name && slug === entry.slug && (link === undefined || link === (entry.link ?? null))) continue;
-    if ((await updateTag(entry.id, name, slug, entry.section, link)) === "slug-taken") taken.push(slug);
+    // Book PDF: a new file replaces the old one; the tick box removes it.
+    let pdf: string | null | undefined;
+    const file = formData.get(`pdf_${entry.id}`);
+    if (isBook && file instanceof File && file.size > 0) pdf = await storePdf(file, back);
+    else if (isBook && formData.get(`rmpdf_${entry.id}`) === "on") pdf = null;
+    if (name === entry.name && slug === entry.slug && pdf === undefined) continue;
+    if ((await updateTag(entry.id, name, slug, entry.section, pdf)) === "slug-taken") {
+      taken.push(slug);
+      if (typeof pdf === "string") await deleteStored(pdf);
+    } else if (pdf !== undefined && entry.pdf && entry.pdf !== pdf) await deleteStored(entry.pdf);
   }
   if (taken.length) redirect(`${back}?error=${encodeURIComponent(`These addresses are already used: ${taken.join(", ")}`)}`);
   redirect(`${back}?saved=1`);

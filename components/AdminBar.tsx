@@ -13,6 +13,12 @@ export default function AdminBar() {
           <Link href="/admin/new" className="hover:text-[var(--ink)]">
             New post
           </Link>
+          <Link href="/admin/remedies" className="hover:text-[var(--ink)]">
+            Remedy
+          </Link>
+          <Link href="/admin/properties" className="hover:text-[var(--ink)]">
+            Medicinal properties
+          </Link>
           <Link href="/admin/herbs" className="hover:text-[var(--ink)]">
             Herbs
           </Link>
