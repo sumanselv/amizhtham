@@ -38,17 +38,32 @@ export function adminConfigured(): boolean {
   return adminPassword() !== null;
 }
 
-export async function checkPassword(candidate: string): Promise<boolean> {
+/** The admin user name, if one is set (the login then asks for it). Case and extra spaces do not matter. */
+function adminUsername(): string | null {
+  const u = getEnv().ADMIN_USERNAME;
+  const clean = typeof u === "string" ? u.trim().replace(/\s+/g, " ").toLowerCase() : "";
+  return clean || null;
+}
+
+export function usernameRequired(): boolean {
+  return adminUsername() !== null;
+}
+
+/** Check the user name (when one is set) and the password. Both are always compared, so timing reveals nothing. */
+export async function checkLogin(username: string, candidate: string): Promise<boolean> {
   const pw = adminPassword();
   if (!pw) return false;
-  return safeEqual(candidate, pw);
+  const expected = adminUsername();
+  const passOk = await safeEqual(candidate, pw);
+  const userOk = expected === null ? true : await safeEqual(username.trim().replace(/\s+/g, " ").toLowerCase(), expected);
+  return passOk && userOk;
 }
 
 export async function startSession(): Promise<void> {
   const pw = adminPassword();
   if (!pw) return;
   const expires = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
-  const token = `${expires}.${await hmac(pw, `session:${expires}`)}`;
+  const token = `${expires}.${await hmac(pw + (adminUsername() ?? ""), `session:${expires}`)}`;
   const jar = await cookies();
   jar.set(COOKIE, token, {
     httpOnly: true,
@@ -73,7 +88,7 @@ export async function isAdmin(): Promise<boolean> {
   const [expiresRaw, sig] = token.split(".");
   const expires = Number(expiresRaw);
   if (!sig || !Number.isFinite(expires) || expires < Date.now() / 1000) return false;
-  return safeEqual(sig, await hmac(pw, `session:${expires}`));
+  return safeEqual(sig, await hmac(pw + (adminUsername() ?? ""), `session:${expires}`));
 }
 
 /** Call at the top of every admin page and every admin server action. */

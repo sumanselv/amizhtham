@@ -39,6 +39,8 @@ export interface AppEnv {
   AI?: AiLike;
   IMAGES?: R2Like;
   ADMIN_PASSWORD: string;
+  /** Optional admin user name. When set, the login asks for it as well as the password. */
+  ADMIN_USERNAME?: string;
 }
 
 /** True when the R2 image bucket is bound to this Worker. */

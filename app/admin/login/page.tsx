@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../actions";
-import { adminConfigured, isAdmin } from "@/lib/auth";
+import { adminConfigured, isAdmin, usernameRequired } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +8,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await isAdmin()) redirect("/admin");
   const { error } = await searchParams;
   const configured = adminConfigured();
+  const askUsername = usernameRequired();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
@@ -22,14 +23,22 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <form action={loginAction} className="mt-4 space-y-4">
             {error && (
               <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                Wrong password. Try again.
+                {askUsername ? "Wrong username or password. Try again." : "Wrong password. Try again."}
               </p>
+            )}
+            {askUsername && (
+              <div>
+                <label htmlFor="username" className="mb-1 block text-sm font-semibold">
+                  Username
+                </label>
+                <input id="username" name="username" type="text" required autoFocus autoComplete="username" className="field" />
+              </div>
             )}
             <div>
               <label htmlFor="password" className="mb-1 block text-sm font-semibold">
                 Password
               </label>
-              <input id="password" name="password" type="password" required autoFocus autoComplete="current-password" className="field" />
+              <input id="password" name="password" type="password" required autoFocus={!askUsername} autoComplete="current-password" className="field" />
             </div>
             <button type="submit" className="btn btn-primary w-full">
               Log in

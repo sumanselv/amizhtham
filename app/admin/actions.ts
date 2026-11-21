@@ -2,7 +2,7 @@
 
 import { waitUntil } from "cloudflare:workers";
 import { redirect } from "next/navigation";
-import { checkPassword, endSession, requireAdmin, startSession } from "@/lib/auth";
+import { checkLogin, endSession, requireAdmin, startSession } from "@/lib/auth";
 import { createPost, createTag, deleteTag, listTagsBySection, deleteMessage, deletePost, getPostById, getTagBySlug, getTagByName, isPlaceholderSlug, tagSlugFor, isImageInUse, updatePost, updateTag, type PostInput } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { translateMany, warmPost } from "@/lib/i18n";
@@ -14,8 +14,9 @@ const MAX_PDF_BYTES = 50 * 1024 * 1024;
 /* ------------------------------ login / logout ------------------------------ */
 
 export async function loginAction(formData: FormData): Promise<void> {
+  const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
-  if (await checkPassword(password)) {
+  if (await checkLogin(username, password)) {
     await startSession();
     redirect("/admin");
   }
